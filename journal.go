@@ -27,7 +27,7 @@ func Save[E Entities](items map[NumericID]struct{}, registry map[NumericID]E, fp
 
 	defer f.Close()
 
-	for id, _ := range items {
+	for id := range items {
 		b, err := json.Marshal(registry[id])
 		if err != nil {
 			log.Printf("marshaling failure: %s, data: %#v", err, registry[id])

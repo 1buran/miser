@@ -33,7 +33,7 @@ func SaveBalances() int { return Save(syncBalances, Balances, BALANCE_FILE) }
 // --------------|---------------------------
 // Assets        |              |
 //               | Increase     |  Decrease
-// Expences      |              |
+// Expenses      |              |
 // -------------------------------------------
 // Liabilities   |              |
 // Equity        | Decrease     |  Increase
