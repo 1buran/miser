@@ -54,33 +54,15 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 		}
 	}
 
+	syncBalances[accID] = struct{}{}
+
 	b, found := Balances[accID]
 	if !found {
 		b = Balance{Account: accID, Value: value}
 		Balances[accID] = b
-		syncBalances[accID] = struct{}{}
 		return
 	}
 	b.Value += value
-}
-
-func RefreshBalances() (n int) {
-	for _, tr := range Transactions {
-		if balance, ok := Balances[tr.Source]; ok {
-			if balance.ReconciledAt.Before(tr.Time) {
-				UpdateBalance(tr.Source, string(Accounts[tr.Source].Type), Credit, tr.Value)
-				n++
-			}
-		}
-
-		if balance, ok := Balances[tr.Dest]; ok {
-			if balance.ReconciledAt.Before(tr.Time) {
-				UpdateBalance(tr.Dest, string(Accounts[tr.Dest].Type), Debit, tr.Value)
-				n++
-			}
-		}
-	}
-	return
 }
 
 // The rearranged accounting equation:

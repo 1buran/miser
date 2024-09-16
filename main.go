@@ -22,10 +22,6 @@ func main() {
 
 	fmt.Println(LoadBalances(), "balances loaded")
 	fmt.Printf("Balances: %#v\n", Balances)
-
-	fmt.Println(RefreshBalances(), "found none reconciled values")
-	fmt.Println(Balances)
-
 	fmt.Println("check balance:", CheckBalance())
 
 	ac1, err := CreateAccount("SMBC Trust Bank", Asset, "Salary account", "JPY")
@@ -80,6 +76,8 @@ func main() {
 	fmt.Printf("\n%#v\n", ac2)
 	fmt.Printf("\n%#v\n", t1e)
 	fmt.Println("Amount:", t1.Amount())
+	fmt.Println("Balances:", Balances)
+	fmt.Println("check balance:", CheckBalance())
 	fmt.Println(SyncAccounts(), "new accounts saved")
 	fmt.Println(SyncTransactions(), "new transactions saved")
 	fmt.Println(SaveBalances(), "balances saved")
