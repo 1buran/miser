@@ -79,7 +79,7 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 	fmt.Printf("\n%#v\n", t1e)
-	fmt.Println(SaveNewAccounts(), "new accounts saved")
-	fmt.Println(SaveNewTransactions(), "new transactions saved")
+	fmt.Println(SyncAccounts(), "new accounts saved")
+	fmt.Println(SyncTransactions(), "new transactions saved")
 	fmt.Println(SaveBalances(), "balances saved")
 }

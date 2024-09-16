@@ -25,7 +25,7 @@ type Transaction struct {
 }
 
 var Transactions map[NumericID]Transaction = make(map[NumericID]Transaction)
-var newTransactions map[NumericID]struct{} = make(map[NumericID]struct{})
+var syncTransactions map[NumericID]struct{} = make(map[NumericID]struct{})
 
 func (t *Transaction) Amount() string {
 	_, _, symbol := Currency(string(Accounts[t.Source].Cur))
@@ -35,11 +35,11 @@ func (t *Transaction) Amount() string {
 // Due to natural order of data in journal, the last found account will be more actual.
 // So modification or editing existing transaction boils down to create a new one item and
 // write it to journal.
-func UpdateTransaction(tr *Transaction) { newTransactions[tr.ID] = struct{}{} }
+func UpdateTransaction(tr *Transaction) { syncTransactions[tr.ID] = struct{}{} }
 
 func DeleteTransaction(tr *Transaction) {
 	tr.Deleted = true
-	newTransactions[tr.ID] = struct{}{}
+	syncTransactions[tr.ID] = struct{}{}
 }
 
 func DeleteAllAccountTransactions(accID NumericID) {
@@ -92,9 +92,9 @@ func CreateTransation(src, dst NumericID, t time.Time, v string, txt string) (*T
 		Text:   EncryptedString(txt),
 	}
 	Transactions[tr.ID] = tr
-	newTransactions[tr.ID] = struct{}{}
+	syncTransactions[tr.ID] = struct{}{}
 	return &tr, nil
 }
 
-func LoadTransactions() int    { return Load(Transactions, TRANSACTIONS_FILE) }
-func SaveNewTransactions() int { return Save(newTransactions, Transactions, TRANSACTIONS_FILE) }
+func LoadTransactions() int { return Load(Transactions, TRANSACTIONS_FILE) }
+func SyncTransactions() int { return Save(syncTransactions, Transactions, TRANSACTIONS_FILE) }
