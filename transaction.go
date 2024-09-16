@@ -24,17 +24,14 @@ type Transaction struct {
 	Deleted          bool
 }
 
-var Transactions map[NumericID]Transaction = make(map[NumericID]Transaction)
-var syncTransactions map[NumericID]struct{} = make(map[NumericID]struct{})
-
 func (t *Transaction) Amount() string {
 	_, _, symbol := Currency(string(Accounts[t.Source].Cur))
 	return fmt.Sprintf("%c %.2f", symbol, float64(t.Value)/Million)
 }
 
-// Due to natural order of data in journal, the last found account will be more actual.
-// So modification or editing existing transaction boils down to create a new one item and
-// write it to journal.
+var Transactions map[NumericID]Transaction = make(map[NumericID]Transaction)
+var syncTransactions map[NumericID]struct{} = make(map[NumericID]struct{})
+
 func UpdateTransaction(tr *Transaction) { syncTransactions[tr.ID] = struct{}{} }
 
 func DeleteTransaction(tr *Transaction) {

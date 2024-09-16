@@ -22,15 +22,11 @@ type Account struct {
 	Deleted               bool
 }
 
-var Accounts map[NumericID]Account = make(map[NumericID]Account)
-
-var syncAccounts map[NumericID]struct{} = make(map[NumericID]struct{})
-
 func (a *Account) isClosed() bool { return !a.ClosedAt.IsZero() }
 
-// Due to natural order of data in journal, the last found account will be more actual.
-// So modification or editing existing account boils down to create a new one item and
-// write it to journal.
+var Accounts map[NumericID]Account = make(map[NumericID]Account)
+var syncAccounts map[NumericID]struct{} = make(map[NumericID]struct{})
+
 func UpdateAccount(acc *Account) { syncAccounts[acc.ID] = struct{}{} }
 
 func DeleteAccount(acc *Account) {
