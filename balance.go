@@ -58,6 +58,7 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 	if !found {
 		b = Balance{Account: accID, Value: value}
 		Balances[accID] = b
+		syncBalances[accID] = struct{}{}
 		return
 	}
 	b.Value += value
@@ -65,14 +66,18 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 
 func RefreshBalances() (n int) {
 	for _, tr := range Transactions {
-		if Balances[tr.Source].ReconciledAt.Before(tr.Time) {
-			UpdateBalance(tr.Source, string(Accounts[tr.Source].Type), Credit, tr.Value)
-			n++
+		if balance, ok := Balances[tr.Source]; ok {
+			if balance.ReconciledAt.Before(tr.Time) {
+				UpdateBalance(tr.Source, string(Accounts[tr.Source].Type), Credit, tr.Value)
+				n++
+			}
 		}
 
-		if Balances[tr.Dest].ReconciledAt.Before(tr.Time) {
-			UpdateBalance(tr.Dest, string(Accounts[tr.Dest].Type), Debit, tr.Value)
-			n++
+		if balance, ok := Balances[tr.Dest]; ok {
+			if balance.ReconciledAt.Before(tr.Time) {
+				UpdateBalance(tr.Dest, string(Accounts[tr.Dest].Type), Debit, tr.Value)
+				n++
+			}
 		}
 	}
 	return
