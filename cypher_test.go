@@ -1,4 +1,4 @@
-package main
+package miser
 
 import (
 	"encoding/json"

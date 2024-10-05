@@ -1,4 +1,4 @@
-package main
+package miser
 
 import (
 	"crypto/aes"
@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"io"
 )
+
+var Encryptor, Decryptor func(b []byte) ([]byte, error)
 
 func encrypt(key string, b []byte) (encrypted []byte, err error) {
 

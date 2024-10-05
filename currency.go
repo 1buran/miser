@@ -1,4 +1,4 @@
-package main
+package miser
 
 func Currency(isoCode string) (bool, string, rune) {
 
