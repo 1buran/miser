@@ -16,10 +16,17 @@ const (
 )
 
 type Account struct {
-	ID                    NumericID
-	Name, Type, Desc, Cur EncryptedString
-	OpenedAt, ClosedAt    time.Time
-	Deleted               bool
+	ID NumericID `json:"id"`
+
+	Name EncryptedString `json:"Name"`
+	Type EncryptedString `json:"Type"`
+	Desc EncryptedString `json:"Desc"`
+	Cur  EncryptedString `json:"Cur"`
+
+	OpenedAt time.Time `json:"OpenedAt"`
+	ClosedAt time.Time `json:"ClosedAt"`
+
+	Deleted bool `json:"Deleted"`
 }
 
 func (a *Account) isClosed() bool { return !a.ClosedAt.IsZero() }
