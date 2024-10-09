@@ -24,6 +24,19 @@ type Transaction struct {
 	Deleted          bool
 }
 
+func (t *Transaction) Amount() string {
+	acc, _ := Accounts.Get(t.Source)
+	_, _, symbol := Currency(string(acc.Cur))
+	return fmt.Sprintf("%c %.2f", symbol, float64(t.Value)/Million)
+}
+
+func UpdateTransaction(t *Transaction) { Transactions.AddQueued(*t) }
+
+func DeleteTransaction(t *Transaction) {
+	t.Deleted = true
+	Transactions.AddQueued(*t)
+}
+
 type TransactionRegistry struct {
 	Items  map[NumericID]Transaction
 	Queued map[NumericID]struct{}
@@ -49,25 +62,6 @@ func (tr TransactionRegistry) SyncQueued() []Transaction {
 		items = append(items, tr.Items[id])
 	}
 	return items
-}
-
-
-func (t *Transaction) Amount() string {
-	acc, _ := Accounts.Get(t.Source)
-	_, _, symbol := Currency(string(acc.Cur))
-	return fmt.Sprintf("%c %.2f", symbol, float64(t.Value)/Million)
-}
-
-var Transactions = TransactionRegistry{
-	Items:  make(map[NumericID]Transaction),
-	Queued: make(map[NumericID]struct{}),
-}
-
-func UpdateTransaction(tr *Transaction) { Transactions.AddQueued(*tr) }
-
-func DeleteTransaction(tr *Transaction) {
-	tr.Deleted = true
-	Transactions.AddQueued(*tr)
 }
 
 func DeleteAllAccountTransactions(accID NumericID) {
@@ -123,6 +117,11 @@ func CreateTransation(src, dst NumericID, t time.Time, v string, txt string) (*T
 	Transactions.AddQueued(tr)
 
 	return &tr, nil
+}
+
+var Transactions = TransactionRegistry{
+	Items:  make(map[NumericID]Transaction),
+	Queued: make(map[NumericID]struct{}),
 }
 
 func LoadTransactions() int { return Load(Transactions, TRANSACTIONS_FILE) }

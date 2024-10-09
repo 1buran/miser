@@ -24,6 +24,14 @@ type Account struct {
 
 func (a *Account) isClosed() bool { return !a.ClosedAt.IsZero() }
 
+func UpdateAccount(acc *Account) { Accounts.AddQueued(*acc) }
+
+func DeleteAccount(acc *Account) {
+	acc.Deleted = true
+	Accounts.AddQueued(*acc)
+	DeleteAllAccountTransactions(acc.ID)
+}
+
 type AccountRegistry struct {
 	Items  map[NumericID]Account
 	Queued map[NumericID]struct{}
@@ -55,19 +63,6 @@ func (ar AccountRegistry) SyncQueued() []Account {
 	return items
 }
 
-var Accounts = AccountRegistry{
-	Items:  make(map[NumericID]Account),
-	Queued: make(map[NumericID]struct{}),
-}
-
-func UpdateAccount(acc *Account) { Accounts.AddQueued(*acc) }
-
-func DeleteAccount(acc *Account) {
-	acc.Deleted = true
-	Accounts.AddQueued(*acc)
-	DeleteAllAccountTransactions(acc.ID)
-}
-
 func CreateAccount(n, t, d, c string) (*Account, error) {
 	n = strings.TrimSpace(n)
 	if n == "" {
@@ -94,6 +89,11 @@ func CreateAccount(n, t, d, c string) (*Account, error) {
 	Accounts.AddQueued(acc)
 
 	return &acc, nil
+}
+
+var Accounts = AccountRegistry{
+	Items:  make(map[NumericID]Account),
+	Queued: make(map[NumericID]struct{}),
 }
 
 func LoadAccounts() int { return Load(Accounts, ACCOUNTS_FILE) }
