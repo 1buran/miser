@@ -14,13 +14,13 @@ func main() {
 	miser.Decryptor = miser.CreateDecryptor(strings.Repeat("0123", 8))
 
 	fmt.Println(miser.LoadAccounts(), "accounts loaded")
-	fmt.Printf("Accounts: %#v\n", miser.Accounts)
+	fmt.Printf("Accounts: %#v\n", miser.Accounts.Items)
 
 	fmt.Println(miser.LoadTransactions(), "transactions loaded")
-	fmt.Printf("Accounts: %#v\n", miser.Transactions)
+	fmt.Printf("Accounts: %#v\n", miser.Transactions.Items)
 
 	fmt.Println(miser.LoadBalances(), "balances loaded")
-	fmt.Printf("Balances: %#v\n", miser.Balances)
+	fmt.Printf("Balances: %#v\n", miser.Balances.Items)
 	fmt.Println("check balance:", miser.CheckBalance())
 
 	ac1, err := miser.CreateAccount("SMBC Trust Bank", miser.Asset, "Salary account", "JPY")

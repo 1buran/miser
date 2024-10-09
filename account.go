@@ -24,15 +24,47 @@ type Account struct {
 
 func (a *Account) isClosed() bool { return !a.ClosedAt.IsZero() }
 
-var Accounts map[NumericID]Account = make(map[NumericID]Account)
-var syncAccounts map[NumericID]struct{} = make(map[NumericID]struct{})
+type AccountRegistry struct {
+	Items  map[NumericID]Account
+	Queued map[NumericID]struct{}
+}
 
-func UpdateAccount(acc *Account) { syncAccounts[acc.ID] = struct{}{} }
+func (ar AccountRegistry) Get(id NumericID) (Account, bool) {
+	acc, ok := ar.Items[id]
+	return acc, ok
+}
+
+func (ar AccountRegistry) Add(a Account) int {
+	if a.Deleted {
+		delete(ar.Items, a.ID)
+	} else {
+		ar.Items[a.ID] = a
+		return 1
+	}
+	return 0
+}
+func (ar AccountRegistry) AddQueued(a Account) {
+	ar.Queued[a.ID] = struct{}{}
+}
+
+func (ar AccountRegistry) SyncQueued() []Account {
+	var items []Account
+	for id := range ar.Queued {
+		items = append(items, ar.Items[id])
+	}
+	return items
+}
+
+var Accounts = AccountRegistry{
+	Items:  make(map[NumericID]Account),
+	Queued: make(map[NumericID]struct{}),
+}
+
+func UpdateAccount(acc *Account) { Accounts.AddQueued(*acc) }
 
 func DeleteAccount(acc *Account) {
 	acc.Deleted = true
-	syncAccounts[acc.ID] = struct{}{}
-
+	Accounts.AddQueued(*acc)
 	DeleteAllAccountTransactions(acc.ID)
 }
 
@@ -58,11 +90,11 @@ func CreateAccount(n, t, d, c string) (*Account, error) {
 		Cur:      EncryptedString(c),
 		OpenedAt: time.Now(),
 	}
-	Accounts[acc.ID] = acc
-	syncAccounts[acc.ID] = struct{}{}
+	Accounts.Add(acc)
+	Accounts.AddQueued(acc)
 
 	return &acc, nil
 }
 
 func LoadAccounts() int { return Load(Accounts, ACCOUNTS_FILE) }
-func SyncAccounts() int { return Save(syncAccounts, Accounts, ACCOUNTS_FILE) }
+func SyncAccounts() int { return Save(Accounts, ACCOUNTS_FILE) }

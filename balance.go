@@ -18,14 +18,43 @@ type Balance struct {
 func (b *Balance) isReconciled() bool { return !b.ReconciledAt.IsZero() }
 func (b *Balance) setReconciled() {
 	b.ReconciledAt = time.Now()
-	syncBalances[b.Account] = struct{}{}
+	Balances.AddQueued(*b)
 }
 
-var Balances map[NumericID]Balance = make(map[NumericID]Balance)
-var syncBalances map[NumericID]struct{} = make(map[NumericID]struct{})
+type BalanceRegistry struct {
+	Items  map[NumericID]Balance
+	Queued map[NumericID]struct{}
+}
+
+func (br BalanceRegistry) Get(id NumericID) (Balance, bool) {
+	bl, ok := br.Items[id]
+	return bl, ok
+}
+
+func (br BalanceRegistry) Add(b Balance) int {
+	br.Items[b.Account] = b
+	return 1
+}
+
+func (br BalanceRegistry) AddQueued(b Balance) {
+	br.Queued[b.Account] = struct{}{}
+}
+
+func (br BalanceRegistry) SyncQueued() []Balance {
+	var items []Balance
+	for id := range br.Queued {
+		items = append(items, br.Items[id])
+	}
+	return items
+}
+
+var Balances = BalanceRegistry{
+	Items:  make(map[NumericID]Balance),
+	Queued: make(map[NumericID]struct{}),
+}
 
 func LoadBalances() int { return Load(Balances, BALANCE_FILE) }
-func SaveBalances() int { return Save(syncBalances, Balances, BALANCE_FILE) }
+func SaveBalances() int { return Save(Balances, BALANCE_FILE) }
 
 // Account Type  | Effect on Account Balance
 // ------------------------------------------
@@ -54,23 +83,24 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 		}
 	}
 
-	syncBalances[accID] = struct{}{}
-
-	b, found := Balances[accID]
+	b, found := Balances.Get(accID)
 	if !found {
 		b = Balance{Account: accID, Value: value}
-		Balances[accID] = b
+		Balances.Add(b)
 		return
 	}
 	b.Value += value
+
+	Balances.AddQueued(b)
 }
 
 // The rearranged accounting equation:
 // Assets + Expenses = Liabilities + Equity + Income
 func CheckBalance() int64 {
 	var as, li, eq, in, ex int64
-	for accID, bl := range Balances {
-		switch Accounts[accID].Type {
+	for accID, bl := range Balances.Items {
+		acc, _ := Accounts.Get(accID)
+		switch acc.Type {
 		case Asset:
 			as += bl.Value
 		case Liability:

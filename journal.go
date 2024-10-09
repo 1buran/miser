@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"reflect"
 )
 
 const (
@@ -19,7 +18,14 @@ type Entities interface {
 	Account | Transaction | Balance
 }
 
-func Save[E Entities](items map[NumericID]struct{}, registry map[NumericID]E, fpath string) (n int) {
+type Registry[E Entities] interface {
+	AccountRegistry | TransactionRegistry | BalanceRegistry
+
+	Add(e E) int
+	SyncQueued() []E
+}
+
+func Save[E Entities, R Registry[E]](registry R, fpath string) (n int) {
 	f, err := os.OpenFile(fpath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		log.Fatal(err)
@@ -27,10 +33,10 @@ func Save[E Entities](items map[NumericID]struct{}, registry map[NumericID]E, fp
 
 	defer f.Close()
 
-	for id := range items {
-		b, err := json.Marshal(registry[id])
+	for _, item := range registry.SyncQueued() {
+		b, err := json.Marshal(item)
 		if err != nil {
-			log.Printf("marshaling failure: %s, data: %#v", err, registry[id])
+			log.Printf("marshaling failure: %s, data: %#v", err, item)
 		}
 
 		b = append(b, 10) // add new line at the end
@@ -43,7 +49,7 @@ func Save[E Entities](items map[NumericID]struct{}, registry map[NumericID]E, fp
 	return
 }
 
-func Load[E Entities](registry map[NumericID]E, fpath string) (n int) {
+func Load[E Entities, R Registry[E]](registry R, fpath string) (n int) {
 	f, err := os.Open(fpath)
 	if err != nil {
 		log.Println(err)
@@ -65,22 +71,7 @@ func Load[E Entities](registry map[NumericID]E, fpath string) (n int) {
 		}
 		var e E
 		json.Unmarshal(b, &e)
-
-		switch any(e).(type) {
-		case Balance:
-			id := NumericID(reflect.ValueOf(e).FieldByName("Account").Int())
-			registry[id] = e
-			n++
-		case Account, Transaction:
-			id := NumericID(reflect.ValueOf(e).FieldByName("ID").Int())
-			isDeleted := reflect.ValueOf(e).FieldByName("Deleted").Bool()
-			if isDeleted {
-				delete(registry, id)
-			} else {
-				registry[id] = e
-				n++
-			}
-		}
+		n += registry.Add(e)
 	}
 	return
 }
