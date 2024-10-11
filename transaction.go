@@ -124,5 +124,5 @@ var Transactions = TransactionRegistry{
 	Queued: make(map[NumericID]struct{}),
 }
 
-func LoadTransactions() int { return Load(Transactions, TRANSACTIONS_FILE) }
-func SyncTransactions() int { return Save(Transactions, TRANSACTIONS_FILE) }
+func LoadTransactions() (int, error) { return Load(Transactions, TRANSACTIONS_FILE) }
+func SyncTransactions() (int, error) { return Save(Transactions, TRANSACTIONS_FILE) }

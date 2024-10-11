@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
-	"log"
 	"os"
 )
 
@@ -25,38 +24,37 @@ type Registry[E Entities] interface {
 	SyncQueued() []E
 }
 
-func Save[E Entities, R Registry[E]](registry R, fpath string) (n int) {
+func Save[E Entities, R Registry[E]](registry R, fpath string) (n int, err error) {
 	f, err := os.OpenFile(fpath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
-		log.Fatal(err)
+		return n, err
 	}
 
-	defer f.Close()
+	defer func() { err = f.Close() }()
 
 	for _, item := range registry.SyncQueued() {
 		b, err := json.Marshal(item)
 		if err != nil {
-			log.Printf("marshaling failure: %s, data: %#v", err, item)
+			return n, err
 		}
 
 		b = append(b, 10) // add new line at the end
 
 		if _, err := f.Write(b); err != nil {
-			log.Printf("write failure: %s", err)
+			return n, err
 		}
 		n++
 	}
-	return
+	return n, err
 }
 
-func Load[E Entities, R Registry[E]](registry R, fpath string) (n int) {
+func Load[E Entities, R Registry[E]](registry R, fpath string) (n int, err error) {
 	f, err := os.Open(fpath)
 	if err != nil {
-		log.Println(err)
-		return
+		return n, err
 	}
 
-	defer f.Close()
+	defer func() { err = f.Close() }()
 
 	r := bufio.NewReader(f)
 
@@ -66,14 +64,16 @@ func Load[E Entities, R Registry[E]](registry R, fpath string) (n int) {
 			if err == io.EOF {
 				break
 			} else {
-				log.Fatal(err)
+				return n, err
 			}
 		}
 		var e E
-		json.Unmarshal(b, &e)
+		if err := json.Unmarshal(b, &e); err != nil {
+			return n, err
+		}
 		n += registry.Add(e)
 	}
-	return
+	return n, err
 }
 
 // Remove all entites from journal marked for deletion.

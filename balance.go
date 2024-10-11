@@ -53,8 +53,8 @@ var Balances = BalanceRegistry{
 	Queued: make(map[NumericID]struct{}),
 }
 
-func LoadBalances() int { return Load(Balances, BALANCE_FILE) }
-func SaveBalances() int { return Save(Balances, BALANCE_FILE) }
+func LoadBalances() (int, error) { return Load(Balances, BALANCE_FILE) }
+func SaveBalances() (int, error) { return Save(Balances, BALANCE_FILE) }
 
 // Account Type  | Effect on Account Balance
 // ------------------------------------------

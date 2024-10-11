@@ -96,5 +96,5 @@ var Accounts = AccountRegistry{
 	Queued: make(map[NumericID]struct{}),
 }
 
-func LoadAccounts() int { return Load(Accounts, ACCOUNTS_FILE) }
-func SyncAccounts() int { return Save(Accounts, ACCOUNTS_FILE) }
+func LoadAccounts() (int, error) { return Load(Accounts, ACCOUNTS_FILE) }
+func SyncAccounts() (int, error) { return Save(Accounts, ACCOUNTS_FILE) }

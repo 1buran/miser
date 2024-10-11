@@ -13,13 +13,16 @@ func main() {
 	miser.Encryptor = miser.CreateEncryptor(strings.Repeat("0123", 8))
 	miser.Decryptor = miser.CreateDecryptor(strings.Repeat("0123", 8))
 
-	fmt.Println(miser.LoadAccounts(), "accounts loaded")
+	n, err := miser.LoadAccounts()
+	fmt.Printf("%d accounts loaded, err: %v\n", n, err)
 	fmt.Printf("Accounts: %#v\n", miser.Accounts.Items)
 
-	fmt.Println(miser.LoadTransactions(), "transactions loaded")
+	n, err = miser.LoadTransactions()
+	fmt.Printf("%d transactions loaded, err: %v\n", n, err)
 	fmt.Printf("Accounts: %#v\n", miser.Transactions.Items)
 
-	fmt.Println(miser.LoadBalances(), "balances loaded")
+	n, err = miser.LoadBalances()
+	fmt.Printf("%d balances loaded, err: %v\n", n, err)
 	fmt.Printf("Balances: %#v\n", miser.Balances.Items)
 	fmt.Println("check balance:", miser.CheckBalance())
 
@@ -77,7 +80,11 @@ func main() {
 	fmt.Println("Amount:", t1.Amount())
 	fmt.Println("Balances:", miser.Balances)
 	fmt.Println("check balance:", miser.CheckBalance())
-	fmt.Println(miser.SyncAccounts(), "new accounts saved")
-	fmt.Println(miser.SyncTransactions(), "new transactions saved")
-	fmt.Println(miser.SaveBalances(), "balances saved")
+
+	n, err = miser.SyncAccounts()
+	fmt.Printf("%d new accounts saved, err: %v\n", n, err)
+	n, err = miser.SyncTransactions()
+	fmt.Printf("%d new transactions saved, err: %v\n", n, err)
+	n, err = miser.SaveBalances()
+	fmt.Printf("%d balances saved, err: %v\n", n, err)
 }
