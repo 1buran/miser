@@ -7,5 +7,5 @@ import (
 type NumericID int64
 
 func CreateID() NumericID {
-	return NumericID(time.Now().UnixNano())
+	return NumericID(time.Now().UnixMicro())
 }
