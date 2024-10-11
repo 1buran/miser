@@ -3,6 +3,7 @@ package miser
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 )
@@ -30,7 +31,15 @@ func Save[E Entities, R Registry[E]](registry R, fpath string) (n int, err error
 		return n, err
 	}
 
-	defer func() { err = f.Close() }()
+	defer func() {
+		if e := f.Close(); e != nil {
+			if err != nil {
+				err = errors.Join(e, err)
+			} else {
+				err = e
+			}
+		}
+	}()
 
 	for _, item := range registry.SyncQueued() {
 		b, err := json.Marshal(item)
@@ -54,7 +63,15 @@ func Load[E Entities, R Registry[E]](registry R, fpath string) (n int, err error
 		return n, err
 	}
 
-	defer func() { err = f.Close() }()
+	defer func() {
+		if e := f.Close(); e != nil {
+			if err != nil {
+				err = errors.Join(e, err)
+			} else {
+				err = e
+			}
+		}
+	}()
 
 	r := bufio.NewReader(f)
 
