@@ -3,7 +3,6 @@ package miser
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -72,13 +71,9 @@ func DeleteAllAccountTransactions(accID NumericID) {
 	}
 }
 
-func CreateTransation(src, dst NumericID, t time.Time, v string, txt string) (*Transaction, error) {
-	val, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		return nil, err
-	}
+func CreateTransation(src, dst NumericID, t time.Time, v float64, txt string) (*Transaction, error) {
 
-	if val <= 0 {
+	if v <= 0 {
 		return nil, errors.New("transaction value should be greater zero")
 	}
 
@@ -96,7 +91,7 @@ func CreateTransation(src, dst NumericID, t time.Time, v string, txt string) (*T
 		return nil, errors.New("dst account not found")
 	}
 
-	value := int64(val * Million)
+	value := int64(v * Million)
 
 	if srcAcc.Type == dstAcc.Type {
 		return nil, errors.New("cannot be transferred to same type of account")

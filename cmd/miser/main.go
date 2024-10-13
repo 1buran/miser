@@ -55,7 +55,7 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 
-	t1, err := miser.CreateTransation(ac1.ID, Aeon.ID, time.Now(), "112.56", "私は店に行き、卵2kgと小麦粉を買いました。")
+	t1, err := miser.CreateTransation(ac1.ID, Aeon.ID, time.Now(), 112.56, "私は店に行き、卵2kgと小麦粉を買いました。")
 	if err != nil {
 		fmt.Println("create transaction failure:", err)
 		os.Exit(1)
