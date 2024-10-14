@@ -87,6 +87,7 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 	if !found {
 		b = Balance{Account: accID, Value: value}
 		Balances.Add(b)
+		Balances.AddQueued(b)
 		return
 	}
 	b.Value += value
