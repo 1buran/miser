@@ -16,7 +16,7 @@ const (
 	Expense   = "Expense"
 )
 
-var accMu sync.Mutex
+var accMu, crossMu sync.Mutex
 
 type Account struct {
 	ID                    ID
@@ -72,6 +72,9 @@ func (ar AccountRegistry) SyncQueued() []Account {
 }
 
 func CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
+	crossMu.Lock()
+	defer crossMu.Unlock()
+
 	n = strings.TrimSpace(n)
 	if n == "" {
 		return nil, errors.New("name of account is blank")

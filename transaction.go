@@ -71,6 +71,8 @@ func DeleteAllAccountTransactions(accID ID) {
 }
 
 func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transaction, error) {
+	crossMu.Lock()
+	defer crossMu.Unlock()
 
 	if v <= 0 {
 		return nil, errors.New("transaction value should be greater zero")
