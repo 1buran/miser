@@ -12,14 +12,16 @@ const (
 	ACCOUNTS_FILE     = "miser.ac"
 	TRANSACTIONS_FILE = "miser.tr"
 	BALANCE_FILE      = "miser.bl"
+	TAGS_FILE         = "miser.tg"
+	TAGS_MAPPING_FILE = "miser.tm"
 )
 
 type Entities interface {
-	Account | Transaction | Balance
+	Account | Transaction | Balance | Tag | TagMap
 }
 
 type Registry[E Entities] interface {
-	*AccountRegistry | *TransactionRegistry | *BalanceRegistry
+	*AccountRegistry | *TransactionRegistry | *BalanceRegistry | *TagRegistry | *TagMapRegistry
 
 	Add(e E) int
 	SyncQueued() []E

@@ -14,17 +14,30 @@ func main() {
 	miser.Decryptor = miser.CreateDecryptor(strings.Repeat("0123", 8))
 
 	n, err := miser.LoadAccounts()
+	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d accounts loaded, err: %v\n", n, err)
 	fmt.Printf("Accounts: %#v\n", miser.Accounts.Items)
 
 	n, err = miser.LoadTransactions()
+	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d transactions loaded, err: %v\n", n, err)
 	fmt.Printf("Accounts: %#v\n", miser.Transactions.Items)
 
 	n, err = miser.LoadBalances()
+	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d balances loaded, err: %v\n", n, err)
 	fmt.Printf("Balances: %#v\n", miser.Balances.Items)
 	//	fmt.Println("check balance:", miser.CheckBalance())
+
+	n, err = miser.LoadTags()
+	fmt.Println(strings.Repeat("---", 40))
+	fmt.Printf("%d tags loaded, err: %v\n", n, err)
+	fmt.Printf("Balances: %#v\n", miser.Tags.Items)
+
+	n, err = miser.LoadTagsMap()
+	fmt.Println(strings.Repeat("---", 40))
+	fmt.Printf("%d tags map loaded, err: %v\n", n, err)
+	fmt.Printf("Balances: %#v\n", miser.TagsMap.Items)
 
 	ac1, err := miser.CreateAccount("SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
 	if err != nil {
@@ -94,4 +107,10 @@ func main() {
 	fmt.Printf("%d new transactions saved, err: %v\n", n, err)
 	n, err = miser.SaveBalances()
 	fmt.Printf("%d balances saved, err: %v\n", n, err)
+
+	n, err = miser.SaveTags()
+	fmt.Printf("%d tags saved, err: %v\n", n, err)
+	n, err = miser.SaveTagsMap()
+	fmt.Printf("%d tags map saved, err: %v\n", n, err)
+
 }

@@ -96,7 +96,17 @@ func CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
 	Accounts.Add(acc)
 	Accounts.AddQueued(acc)
 
-	CreateBalance(acc.ID, int64(initBalance*Million))
+	v := int64(initBalance * Million)
+	tr := CreateInitialTransaction(acc.ID, v)
+	b := CreateBalance(acc.ID, tr.ID, v)
+
+	tag := Tags.GetByName(Initial)
+	if tag == nil {
+		tag = Tags.Create(Initial)
+	}
+
+	TagsMap.Create(tag.ID, tr.ID, TransactionTag)
+	TagsMap.Create(tag.ID, b.ID, BalanceTag)
 
 	return &acc, nil
 }

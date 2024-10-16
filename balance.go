@@ -110,7 +110,7 @@ func SaveBalances() (int, error) { return Save(&Balances, BALANCE_FILE) }
 //
 
 // Credit - source, Debit - destination
-func UpdateBalance(accID ID, accType string, operType int, value int64) {
+func UpdateBalance(accID, trID ID, accType string, operType int, value int64) {
 	switch operType {
 	case Credit:
 		if accType == Asset || accType == Expense {
@@ -127,14 +127,15 @@ func UpdateBalance(accID ID, accType string, operType int, value int64) {
 		panic("tried update nil balance, account ID:" + accID)
 	}
 	value += b.Value
-	CreateBalance(accID, value)
+	CreateBalance(accID, trID, value)
 }
 
 // Create balance for an account
-func CreateBalance(accID ID, value int64) {
-	b := Balance{ID: CreateID(), Account: accID, Value: value, Time: time.Now()}
+func CreateBalance(accID, trID ID, value int64) *Balance {
+	b := Balance{ID: CreateID(), Account: accID, Transaction: trID, Value: value, Time: time.Now()}
 	Balances.Add(b)
 	Balances.AddQueued(b)
+	return &b
 }
 
 // The rearranged accounting equation:

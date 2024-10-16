@@ -24,6 +24,7 @@ type Transaction struct {
 	Deleted          bool
 }
 
+func (t *Transaction) IsInitial() bool { return t.Source == t.Dest }
 func (t *Transaction) Amount() string {
 	acc := Accounts.Get(t.Source)
 	_, _, symbol := Currency(string(acc.Cur))
@@ -97,9 +98,6 @@ func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transac
 		return nil, errors.New("cannot be transferred to same type of account")
 	}
 
-	UpdateBalance(src, string(srcAcc.Type), Credit, value)
-	UpdateBalance(dst, string(dstAcc.Type), Debit, value)
-
 	tr := Transaction{
 		ID:     CreateID(),
 		Source: src,
@@ -111,6 +109,9 @@ func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transac
 	Transactions.Add(tr)
 	Transactions.AddQueued(tr)
 
+	UpdateBalance(src, tr.ID, string(srcAcc.Type), Credit, value)
+	UpdateBalance(dst, tr.ID, string(dstAcc.Type), Debit, value)
+
 	return &tr, nil
 }
 
@@ -118,3 +119,13 @@ var Transactions = TransactionRegistry{}
 
 func LoadTransactions() (int, error) { return Load(&Transactions, TRANSACTIONS_FILE) }
 func SyncTransactions() (int, error) { return Save(&Transactions, TRANSACTIONS_FILE) }
+
+func CreateInitialTransaction(accID ID, v int64) *Transaction {
+	tr := Transaction{
+		ID: CreateID(), Source: accID, Dest: accID, Time: time.Now(),
+		Value: v, Text: "Initial balance"}
+	Transactions.Add(tr)
+	Transactions.AddQueued(tr)
+
+	return &tr
+}

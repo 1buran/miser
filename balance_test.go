@@ -23,6 +23,17 @@ func TestInitBalance(t *testing.T) {
 		if b.Value != 0 {
 			t.Errorf("expected 0, %d found", b.Value)
 		}
+
+		tmaps := TagsMap.GetByItemId(b.ID)
+		if len(tmaps) != 1 {
+			t.Fatalf("expected 1 tag, found: %d", len(tmaps))
+		}
+
+		expectedTag := Tags.GetByName(Initial)
+		if tmaps[0].Tag != expectedTag.ID {
+			t.Errorf("unexpected tag found: %#v", Tags.GetById(tmaps[0].Tag))
+		}
+
 	})
 
 	t.Run("float", func(t *testing.T) {
