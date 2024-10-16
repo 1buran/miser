@@ -24,15 +24,15 @@ func main() {
 	n, err = miser.LoadBalances()
 	fmt.Printf("%d balances loaded, err: %v\n", n, err)
 	fmt.Printf("Balances: %#v\n", miser.Balances.Items)
-	fmt.Println("check balance:", miser.CheckBalance())
+	//	fmt.Println("check balance:", miser.CheckBalance())
 
-	ac1, err := miser.CreateAccount("SMBC Trust Bank", miser.Asset, "Salary account", "JPY")
+	ac1, err := miser.CreateAccount("SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	Aeon, err := miser.CreateAccount("AEON Supermarket", miser.Expense, "work bank account", "JPY")
+	Aeon, err := miser.CreateAccount("AEON Supermarket", miser.Expense, "work bank account", "JPY", 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -55,11 +55,18 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 
+	ac1B := miser.Balances.AccountValue(ac1.ID)
+	fmt.Printf("Balance of SMBC before transaction: %.2f\n", ac1B)
+
 	t1, err := miser.CreateTransation(ac1.ID, Aeon.ID, time.Now(), 112.56, "私は店に行き、卵2kgと小麦粉を買いました。")
 	if err != nil {
 		fmt.Println("create transaction failure:", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Transaction: %#v\n", t1)
+
+	ac1B = miser.Balances.AccountValue(ac1.ID)
+	fmt.Printf("Balance of SMBC after transaction: %.2f\n", ac1B)
 
 	b, err = json.Marshal(t1)
 	if err != nil {
@@ -79,7 +86,7 @@ func main() {
 	fmt.Printf("\n%#v\n", t1e)
 	fmt.Println("Amount:", t1.Amount())
 	fmt.Println("Balances:", miser.Balances)
-	fmt.Println("check balance:", miser.CheckBalance())
+	// fmt.Println("check balance:", miser.CheckBalance())
 
 	n, err = miser.SyncAccounts()
 	fmt.Printf("%d new accounts saved, err: %v\n", n, err)

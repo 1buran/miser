@@ -10,51 +10,75 @@ const (
 )
 
 type Balance struct {
-	Account      NumericID
-	Value        int64
-	ReconciledAt time.Time
-}
-
-func (b *Balance) isReconciled() bool { return !b.ReconciledAt.IsZero() }
-func (b *Balance) setReconciled() {
-	b.ReconciledAt = time.Now()
-	Balances.AddQueued(*b)
+	ID, Account, Transaction ID
+	Value                    int64
+	Time                     time.Time
 }
 
 type BalanceRegistry struct {
-	Items  map[NumericID]Balance
-	Queued map[NumericID]struct{}
+	Items  []Balance // all items loaded from disk
+	Queued []Balance // queue of items for sync to disk
 }
 
-func (br BalanceRegistry) Get(id NumericID) (Balance, bool) {
-	bl, ok := br.Items[id]
-	return bl, ok
+// Find a balance of given account transaction.
+func (br BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
+	for i := len(br.Items) - 1; i >= 0; i-- {
+		item := br.Items[i]
+		if item.Account == accID && item.Transaction == trID {
+			return &item
+		}
+	}
+	return nil
 }
 
-func (br BalanceRegistry) Add(b Balance) int {
-	br.Items[b.Account] = b
+// Find a current(last) balance of account.
+func (br BalanceRegistry) AccountBalance(accID ID) *Balance {
+	for i := len(br.Items) - 1; i >= 0; i-- {
+		if br.Items[i].Account == accID {
+			return &br.Items[i]
+		}
+	}
+	return nil
+}
+
+func (br BalanceRegistry) AccountValue(accID ID) float64 {
+	b := br.AccountBalance(accID)
+	if b == nil {
+		return 0
+	}
+	return float64(b.Value) / Million
+}
+
+// Update balance in registry.
+// todo considering change registry items to map of pointers for able update items directly
+func (br BalanceRegistry) Update(b Balance) {
+	for i := len(br.Items) - 1; i >= 0; i-- {
+		item := br.Items[i]
+		if item.ID == b.ID {
+			item = b
+			break
+		}
+	}
+	br.AddQueued(b)
+}
+
+func (br *BalanceRegistry) Add(b Balance) int {
+	br.Items = append(br.Items, b)
 	return 1
 }
 
-func (br BalanceRegistry) AddQueued(b Balance) {
-	br.Queued[b.Account] = struct{}{}
+func (br *BalanceRegistry) AddQueued(b Balance) {
+	br.Queued = append(br.Queued, b)
 }
 
 func (br BalanceRegistry) SyncQueued() []Balance {
-	var items []Balance
-	for id := range br.Queued {
-		items = append(items, br.Items[id])
-	}
-	return items
+	return br.Queued
 }
 
-var Balances = BalanceRegistry{
-	Items:  make(map[NumericID]Balance),
-	Queued: make(map[NumericID]struct{}),
-}
+var Balances = BalanceRegistry{}
 
-func LoadBalances() (int, error) { return Load(Balances, BALANCE_FILE) }
-func SaveBalances() (int, error) { return Save(Balances, BALANCE_FILE) }
+func LoadBalances() (int, error) { return Load(&Balances, BALANCE_FILE) }
+func SaveBalances() (int, error) { return Save(&Balances, BALANCE_FILE) }
 
 // Account Type  | Effect on Account Balance
 // ------------------------------------------
@@ -71,7 +95,7 @@ func SaveBalances() (int, error) { return Save(Balances, BALANCE_FILE) }
 //
 
 // Credit - source, Debit - destination
-func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
+func UpdateBalance(accID ID, accType string, operType int, value int64) {
 	switch operType {
 	case Credit:
 		if accType == Asset || accType == Expense {
@@ -83,36 +107,39 @@ func UpdateBalance(accID NumericID, accType string, operType int, value int64) {
 		}
 	}
 
-	b, found := Balances.Get(accID)
-	if !found {
-		b = Balance{Account: accID, Value: value}
-		Balances.Add(b)
-		Balances.AddQueued(b)
-		return
+	b := Balances.AccountBalance(accID)
+	if b == nil {
+		panic("tried update nil balance, account ID:" + accID)
 	}
-	b.Value += value
+	value += b.Value
+	CreateBalance(accID, value)
+}
 
+// Create balance for an account
+func CreateBalance(accID ID, value int64) {
+	b := Balance{ID: CreateID(), Account: accID, Value: value, Time: time.Now()}
+	Balances.Add(b)
 	Balances.AddQueued(b)
 }
 
 // The rearranged accounting equation:
 // Assets + Expenses = Liabilities + Equity + Income
-func CheckBalance() int64 {
-	var as, li, eq, in, ex int64
-	for accID, bl := range Balances.Items {
-		acc, _ := Accounts.Get(accID)
-		switch acc.Type {
-		case Asset:
-			as += bl.Value
-		case Liability:
-			li += bl.Value
-		case Equity:
-			eq += bl.Value
-		case Income:
-			in += bl.Value
-		case Expense:
-			ex += bl.Value
-		}
-	}
-	return as + ex - li - eq - in
-}
+// func CheckBalance() int64 {
+// 	var as, li, eq, in, ex int64
+// 	for accID, bl := range Balances.Items {
+// 		acc, _ := Accounts.Get(accID)
+// 		switch acc.Type {
+// 		case Asset:
+// 			as += bl.Value
+// 		case Liability:
+// 			li += bl.Value
+// 		case Equity:
+// 			eq += bl.Value
+// 		case Income:
+// 			in += bl.Value
+// 		case Expense:
+// 			ex += bl.Value
+// 		}
+// 	}
+// 	return as + ex - li - eq - in
+// }

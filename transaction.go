@@ -15,7 +15,7 @@ const (
 )
 
 type Transaction struct {
-	ID, Source, Dest NumericID
+	ID, Source, Dest ID
 	Time             time.Time
 	Text             EncryptedString
 	Value            int64 // in millionths
@@ -24,7 +24,7 @@ type Transaction struct {
 }
 
 func (t *Transaction) Amount() string {
-	acc, _ := Accounts.Get(t.Source)
+	acc := Accounts.Get(t.Source)
 	_, _, symbol := Currency(string(acc.Cur))
 	return fmt.Sprintf("%c %.2f", symbol, float64(t.Value)/Million)
 }
@@ -37,33 +37,25 @@ func DeleteTransaction(t *Transaction) {
 }
 
 type TransactionRegistry struct {
-	Items  map[NumericID]Transaction
-	Queued map[NumericID]struct{}
+	Items  []Transaction
+	Queued []Transaction
 }
 
-func (tr TransactionRegistry) Add(t Transaction) int {
-	if t.Deleted {
-		delete(tr.Items, t.ID)
-	} else {
-		tr.Items[t.ID] = t
-		return 1
-	}
-	return 0
+func (tr *TransactionRegistry) Add(t Transaction) int {
+	tr.Items = append(tr.Items, t)
+	return 1
 }
 
-func (tr TransactionRegistry) AddQueued(t Transaction) {
-	tr.Queued[t.ID] = struct{}{}
+func (tr *TransactionRegistry) AddQueued(t Transaction) {
+	tr.Queued = append(tr.Queued, t)
 }
 
 func (tr TransactionRegistry) SyncQueued() []Transaction {
-	var items []Transaction
-	for id := range tr.Queued {
-		items = append(items, tr.Items[id])
-	}
-	return items
+	return tr.Queued
 }
 
-func DeleteAllAccountTransactions(accID NumericID) {
+// Delete all transaction of given account (useful in case of account deletion).
+func DeleteAllAccountTransactions(accID ID) {
 	for _, tr := range Transactions.Items {
 		if tr.Dest == accID || tr.Source == accID {
 			DeleteTransaction(&tr)
@@ -71,7 +63,7 @@ func DeleteAllAccountTransactions(accID NumericID) {
 	}
 }
 
-func CreateTransation(src, dst NumericID, t time.Time, v float64, txt string) (*Transaction, error) {
+func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transaction, error) {
 
 	if v <= 0 {
 		return nil, errors.New("transaction value should be greater zero")
@@ -81,13 +73,13 @@ func CreateTransation(src, dst NumericID, t time.Time, v float64, txt string) (*
 		return nil, errors.New("zero time of transaction is not allowed")
 	}
 
-	srcAcc, found := Accounts.Get(src)
-	if !found {
+	srcAcc := Accounts.Get(src)
+	if srcAcc == nil {
 		return nil, errors.New("src account not found")
 	}
 
-	dstAcc, found := Accounts.Get(dst)
-	if !found {
+	dstAcc := Accounts.Get(dst)
+	if dstAcc == nil {
 		return nil, errors.New("dst account not found")
 	}
 
@@ -114,10 +106,7 @@ func CreateTransation(src, dst NumericID, t time.Time, v float64, txt string) (*
 	return &tr, nil
 }
 
-var Transactions = TransactionRegistry{
-	Items:  make(map[NumericID]Transaction),
-	Queued: make(map[NumericID]struct{}),
-}
+var Transactions = TransactionRegistry{}
 
-func LoadTransactions() (int, error) { return Load(Transactions, TRANSACTIONS_FILE) }
-func SyncTransactions() (int, error) { return Save(Transactions, TRANSACTIONS_FILE) }
+func LoadTransactions() (int, error) { return Load(&Transactions, TRANSACTIONS_FILE) }
+func SyncTransactions() (int, error) { return Save(&Transactions, TRANSACTIONS_FILE) }

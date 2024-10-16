@@ -19,7 +19,7 @@ type Entities interface {
 }
 
 type Registry[E Entities] interface {
-	AccountRegistry | TransactionRegistry | BalanceRegistry
+	*AccountRegistry | *TransactionRegistry | *BalanceRegistry
 
 	Add(e E) int
 	SyncQueued() []E

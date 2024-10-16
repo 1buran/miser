@@ -16,7 +16,7 @@ const (
 )
 
 type Account struct {
-	ID                    NumericID
+	ID                    ID
 	Name, Type, Desc, Cur EncryptedString
 	OpenedAt, ClosedAt    time.Time
 	Deleted               bool
@@ -33,37 +33,34 @@ func DeleteAccount(acc *Account) {
 }
 
 type AccountRegistry struct {
-	Items  map[NumericID]Account
-	Queued map[NumericID]struct{}
+	Items  []Account
+	Queued []Account
 }
 
-func (ar AccountRegistry) Get(id NumericID) (Account, bool) {
-	acc, ok := ar.Items[id]
-	return acc, ok
-}
-
-func (ar AccountRegistry) Add(a Account) int {
-	if a.Deleted {
-		delete(ar.Items, a.ID)
-	} else {
-		ar.Items[a.ID] = a
-		return 1
+func (ar AccountRegistry) Get(accID ID) *Account {
+	for _, item := range ar.Items {
+		if item.ID == accID {
+			return &item
+		}
 	}
-	return 0
+	return nil
 }
-func (ar AccountRegistry) AddQueued(a Account) {
-	ar.Queued[a.ID] = struct{}{}
+
+func (ar *AccountRegistry) Add(a Account) int {
+	ar.Items = append(ar.Items, a)
+	return 1
+
+}
+
+func (ar *AccountRegistry) AddQueued(a Account) {
+	ar.Queued = append(ar.Queued, a)
 }
 
 func (ar AccountRegistry) SyncQueued() []Account {
-	var items []Account
-	for id := range ar.Queued {
-		items = append(items, ar.Items[id])
-	}
-	return items
+	return ar.Queued
 }
 
-func CreateAccount(n, t, d, c string) (*Account, error) {
+func CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
 	n = strings.TrimSpace(n)
 	if n == "" {
 		return nil, errors.New("name of account is blank")
@@ -88,13 +85,12 @@ func CreateAccount(n, t, d, c string) (*Account, error) {
 	Accounts.Add(acc)
 	Accounts.AddQueued(acc)
 
+	CreateBalance(acc.ID, int64(initBalance*Million))
+
 	return &acc, nil
 }
 
-var Accounts = AccountRegistry{
-	Items:  make(map[NumericID]Account),
-	Queued: make(map[NumericID]struct{}),
-}
+var Accounts = AccountRegistry{}
 
-func LoadAccounts() (int, error) { return Load(Accounts, ACCOUNTS_FILE) }
-func SyncAccounts() (int, error) { return Save(Accounts, ACCOUNTS_FILE) }
+func LoadAccounts() (int, error) { return Load(&Accounts, ACCOUNTS_FILE) }
+func SyncAccounts() (int, error) { return Save(&Accounts, ACCOUNTS_FILE) }
