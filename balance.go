@@ -25,6 +25,8 @@ type BalanceRegistry struct {
 
 // Find a balance of given account transaction.
 func (br BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
+	balMu.Lock()
+	defer balMu.Unlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
 		if item.Account == accID && item.Transaction == trID {
@@ -36,6 +38,8 @@ func (br BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 
 // Find a current(last) balance of account.
 func (br BalanceRegistry) AccountBalance(accID ID) *Balance {
+	balMu.Lock()
+	defer balMu.Unlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		if br.Items[i].Account == accID {
 			return &br.Items[i]
@@ -55,6 +59,8 @@ func (br BalanceRegistry) AccountValue(accID ID) float64 {
 // Update balance in registry.
 // todo considering change registry items to map of pointers for able update items directly
 func (br BalanceRegistry) Update(b Balance) {
+	balMu.Lock()
+	defer balMu.Unlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
 		if item.ID == b.ID {
@@ -79,6 +85,8 @@ func (br *BalanceRegistry) AddQueued(b Balance) {
 }
 
 func (br BalanceRegistry) SyncQueued() []Balance {
+	balMu.Lock()
+	defer balMu.Unlock()
 	return br.Queued
 }
 

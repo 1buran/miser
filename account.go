@@ -41,6 +41,8 @@ type AccountRegistry struct {
 }
 
 func (ar AccountRegistry) Get(accID ID) *Account {
+	accMu.Lock()
+	defer accMu.Unlock()
 	for _, item := range ar.Items {
 		if item.ID == accID {
 			return &item
@@ -64,6 +66,8 @@ func (ar *AccountRegistry) AddQueued(a Account) {
 }
 
 func (ar AccountRegistry) SyncQueued() []Account {
+	accMu.Lock()
+	defer accMu.Unlock()
 	return ar.Queued
 }
 
