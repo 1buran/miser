@@ -15,8 +15,6 @@ const (
 	Cleared          // complete, reconciled as far as possible, and considered correct
 )
 
-var traMu sync.Mutex
-
 type Transaction struct {
 	ID, Source, Dest ID
 	Time             time.Time
@@ -42,22 +40,26 @@ func DeleteTransaction(t *Transaction) {
 type TransactionRegistry struct {
 	Items  []Transaction
 	Queued []Transaction
+
+	sync.RWMutex
 }
 
 func (tr *TransactionRegistry) Add(t Transaction) int {
-	traMu.Lock()
-	defer traMu.Unlock()
+	tr.Lock()
+	defer tr.Unlock()
 	tr.Items = append(tr.Items, t)
 	return 1
 }
 
 func (tr *TransactionRegistry) AddQueued(t Transaction) {
-	traMu.Lock()
-	defer traMu.Unlock()
+	tr.Lock()
+	defer tr.Unlock()
 	tr.Queued = append(tr.Queued, t)
 }
 
-func (tr TransactionRegistry) SyncQueued() []Transaction {
+func (tr *TransactionRegistry) SyncQueued() []Transaction {
+	tr.RLock()
+	defer tr.RUnlock()
 	return tr.Queued
 }
 
@@ -71,9 +73,6 @@ func DeleteAllAccountTransactions(accID ID) {
 }
 
 func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transaction, error) {
-	crossMu.Lock()
-	defer crossMu.Unlock()
-
 	if v <= 0 {
 		return nil, errors.New("transaction value should be greater zero")
 	}

@@ -16,8 +16,6 @@ const (
 	Expense   = "Expense"
 )
 
-var accMu, crossMu sync.Mutex
-
 type Account struct {
 	ID                    ID
 	Name, Type, Desc, Cur EncryptedString
@@ -38,11 +36,13 @@ func DeleteAccount(acc *Account) {
 type AccountRegistry struct {
 	Items  []Account
 	Queued []Account
+
+	sync.RWMutex
 }
 
-func (ar AccountRegistry) Get(accID ID) *Account {
-	accMu.Lock()
-	defer accMu.Unlock()
+func (ar *AccountRegistry) Get(accID ID) *Account {
+	ar.RLock()
+	defer ar.RUnlock()
 	for _, item := range ar.Items {
 		if item.ID == accID {
 			return &item
@@ -52,29 +52,26 @@ func (ar AccountRegistry) Get(accID ID) *Account {
 }
 
 func (ar *AccountRegistry) Add(a Account) int {
-	accMu.Lock()
-	defer accMu.Unlock()
+	ar.Lock()
+	defer ar.Unlock()
 	ar.Items = append(ar.Items, a)
 	return 1
 
 }
 
 func (ar *AccountRegistry) AddQueued(a Account) {
-	accMu.Lock()
-	defer accMu.Unlock()
+	ar.Lock()
+	defer ar.Unlock()
 	ar.Queued = append(ar.Queued, a)
 }
 
-func (ar AccountRegistry) SyncQueued() []Account {
-	accMu.Lock()
-	defer accMu.Unlock()
+func (ar *AccountRegistry) SyncQueued() []Account {
+	ar.RLock()
+	defer ar.RUnlock()
 	return ar.Queued
 }
 
 func CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
-	crossMu.Lock()
-	defer crossMu.Unlock()
-
 	n = strings.TrimSpace(n)
 	if n == "" {
 		return nil, errors.New("name of account is blank")

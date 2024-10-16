@@ -10,8 +10,6 @@ const (
 	Debit
 )
 
-var balMu sync.Mutex
-
 type Balance struct {
 	ID, Account, Transaction ID
 	Value                    int64
@@ -21,12 +19,14 @@ type Balance struct {
 type BalanceRegistry struct {
 	Items  []Balance // all items loaded from disk
 	Queued []Balance // queue of items for sync to disk
+
+	sync.RWMutex
 }
 
 // Find a balance of given account transaction.
-func (br BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
-	balMu.Lock()
-	defer balMu.Unlock()
+func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
+	br.RLock()
+	defer br.RUnlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
 		if item.Account == accID && item.Transaction == trID {
@@ -37,9 +37,9 @@ func (br BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 }
 
 // Find a current(last) balance of account.
-func (br BalanceRegistry) AccountBalance(accID ID) *Balance {
-	balMu.Lock()
-	defer balMu.Unlock()
+func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
+	br.RLock()
+	defer br.RUnlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		if br.Items[i].Account == accID {
 			return &br.Items[i]
@@ -48,7 +48,7 @@ func (br BalanceRegistry) AccountBalance(accID ID) *Balance {
 	return nil
 }
 
-func (br BalanceRegistry) AccountValue(accID ID) float64 {
+func (br *BalanceRegistry) AccountValue(accID ID) float64 {
 	b := br.AccountBalance(accID)
 	if b == nil {
 		return 0
@@ -58,9 +58,9 @@ func (br BalanceRegistry) AccountValue(accID ID) float64 {
 
 // Update balance in registry.
 // todo considering change registry items to map of pointers for able update items directly
-func (br BalanceRegistry) Update(b Balance) {
-	balMu.Lock()
-	defer balMu.Unlock()
+func (br *BalanceRegistry) Update(b Balance) {
+	br.Lock()
+	defer br.Unlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
 		if item.ID == b.ID {
@@ -72,21 +72,21 @@ func (br BalanceRegistry) Update(b Balance) {
 }
 
 func (br *BalanceRegistry) Add(b Balance) int {
-	balMu.Lock()
-	defer balMu.Unlock()
+	br.Lock()
+	defer br.Unlock()
 	br.Items = append(br.Items, b)
 	return 1
 }
 
 func (br *BalanceRegistry) AddQueued(b Balance) {
-	balMu.Lock()
-	defer balMu.Unlock()
+	br.Lock()
+	defer br.Unlock()
 	br.Queued = append(br.Queued, b)
 }
 
-func (br BalanceRegistry) SyncQueued() []Balance {
-	balMu.Lock()
-	defer balMu.Unlock()
+func (br *BalanceRegistry) SyncQueued() []Balance {
+	br.RLock()
+	defer br.RUnlock()
 	return br.Queued
 }
 
