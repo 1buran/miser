@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,8 @@ const (
 	Income    = "Income"
 	Expense   = "Expense"
 )
+
+var accMu sync.Mutex
 
 type Account struct {
 	ID                    ID
@@ -47,12 +50,16 @@ func (ar AccountRegistry) Get(accID ID) *Account {
 }
 
 func (ar *AccountRegistry) Add(a Account) int {
+	accMu.Lock()
+	defer accMu.Unlock()
 	ar.Items = append(ar.Items, a)
 	return 1
 
 }
 
 func (ar *AccountRegistry) AddQueued(a Account) {
+	accMu.Lock()
+	defer accMu.Unlock()
 	ar.Queued = append(ar.Queued, a)
 }
 

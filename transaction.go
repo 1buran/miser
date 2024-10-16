@@ -3,6 +3,7 @@ package miser
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,8 @@ const (
 	Pending          // tentatively reconciled (if needed, eg during a big reconciliation)
 	Cleared          // complete, reconciled as far as possible, and considered correct
 )
+
+var traMu sync.Mutex
 
 type Transaction struct {
 	ID, Source, Dest ID
@@ -42,11 +45,15 @@ type TransactionRegistry struct {
 }
 
 func (tr *TransactionRegistry) Add(t Transaction) int {
+	traMu.Lock()
+	defer traMu.Unlock()
 	tr.Items = append(tr.Items, t)
 	return 1
 }
 
 func (tr *TransactionRegistry) AddQueued(t Transaction) {
+	traMu.Lock()
+	defer traMu.Unlock()
 	tr.Queued = append(tr.Queued, t)
 }
 

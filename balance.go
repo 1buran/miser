@@ -1,6 +1,7 @@
 package miser
 
 import (
+	"sync"
 	"time"
 )
 
@@ -8,6 +9,8 @@ const (
 	Credit = iota
 	Debit
 )
+
+var balMu sync.Mutex
 
 type Balance struct {
 	ID, Account, Transaction ID
@@ -63,11 +66,15 @@ func (br BalanceRegistry) Update(b Balance) {
 }
 
 func (br *BalanceRegistry) Add(b Balance) int {
+	balMu.Lock()
+	defer balMu.Unlock()
 	br.Items = append(br.Items, b)
 	return 1
 }
 
 func (br *BalanceRegistry) AddQueued(b Balance) {
+	balMu.Lock()
+	defer balMu.Unlock()
 	br.Queued = append(br.Queued, b)
 }
 
