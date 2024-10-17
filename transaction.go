@@ -45,12 +45,20 @@ type TransactionRegistry struct {
 	sync.RWMutex
 }
 
-func (tr *TransactionRegistry) List() map[ID]Transaction {
+func (tr *TransactionRegistry) List() (transactions []Transaction) {
 	tr.RLock()
 	defer tr.RUnlock()
-	transactions := make(map[ID]Transaction)
-	for _, transa := range tr.Items {
-		transactions[transa.ID] = transa
+
+	m := make(map[ID]int)
+
+	for i, transa := range tr.Items {
+		n, oldVersion := m[transa.ID]
+		if oldVersion {
+			transactions[n] = transa
+		} else {
+			m[transa.ID] = i
+			transactions = append(transactions, transa)
+		}
 	}
 	return transactions
 }
