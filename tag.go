@@ -67,11 +67,15 @@ func (tr *TagRegistry) Create(n string) *Tag {
 }
 
 // List all tags.
-func (tr *TagRegistry) List() []Tag {
+func (tr *TagRegistry) List() map[ID]Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	return tr.Items
+	tags := make(map[ID]Tag)
+	for _, tag := range tr.Items { // the last readed is the most actual version
+		tags[tag.ID] = tag
+	}
+	return tags
 }
 
 func (tr *TagRegistry) Add(t Tag) int {
