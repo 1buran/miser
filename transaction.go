@@ -45,6 +45,15 @@ type TransactionRegistry struct {
 	sync.RWMutex
 }
 
+func (tr *TransactionRegistry) List() (transactions map[ID]Transaction) {
+	tr.RLock()
+	defer tr.RUnlock()
+
+	for _, transa := tr.Items {
+		transactions[tr.ID] = tr
+	}
+	return
+}
 func (tr *TransactionRegistry) Add(t Transaction) int {
 	tr.Lock()
 	defer tr.Unlock()
