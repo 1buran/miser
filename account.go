@@ -44,7 +44,7 @@ func (ar *AccountRegistry) List() (accounts map[ID]Account) {
 	ar.RLock()
 	defer ar.RUnlock()
 
-	for _, acc := ar.Items { // the last readed is the most actual version
+	for _, acc := range ar.Items { // the last readed is the most actual version
 		accounts[acc.ID] = acc
 	}
 	return

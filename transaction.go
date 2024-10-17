@@ -49,8 +49,8 @@ func (tr *TransactionRegistry) List() (transactions map[ID]Transaction) {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for _, transa := tr.Items {
-		transactions[tr.ID] = tr
+	for _, transa := range tr.Items {
+		transactions[transa.ID] = transa
 	}
 	return
 }
