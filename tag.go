@@ -37,7 +37,8 @@ func (tr *TagRegistry) GetById(tagID ID) *Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for _, v := range tr.Items {
+	for i := len(tr.Items) - 1; i >= 0; i-- {
+		v := tr.Items[i]
 		if v.ID == tagID {
 			return &v
 		}
@@ -49,7 +50,8 @@ func (tr *TagRegistry) GetByName(n string) *Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for _, v := range tr.Items {
+	for i := len(tr.Items) - 1; i >= 0; i-- {
+		v := tr.Items[i]
 		if string(v.Name) == n {
 			return &v
 		}

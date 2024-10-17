@@ -43,7 +43,8 @@ type AccountRegistry struct {
 func (ar *AccountRegistry) Get(accID ID) *Account {
 	ar.RLock()
 	defer ar.RUnlock()
-	for _, item := range ar.Items {
+	for i := len(ar.Items) - 1; i >= 0; i-- {
+		item := ar.Items[i]
 		if item.ID == accID {
 			return &item
 		}
