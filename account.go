@@ -40,14 +40,14 @@ type AccountRegistry struct {
 	sync.RWMutex
 }
 
-func (ar *AccountRegistry) List() (accounts map[ID]Account) {
+func (ar *AccountRegistry) List() map[ID]Account {
 	ar.RLock()
 	defer ar.RUnlock()
-
+	accounts := make(map[ID]Account)
 	for _, acc := range ar.Items { // the last readed is the most actual version
 		accounts[acc.ID] = acc
 	}
-	return
+	return accounts
 }
 
 func (ar *AccountRegistry) Get(accID ID) *Account {
