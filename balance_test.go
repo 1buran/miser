@@ -148,7 +148,7 @@ func TestListBalance(t *testing.T) {
 
 	val := func(v float64) int64 { return int64(v * Million) }
 
-	lenBalances := len(Balances.Items)
+	lenBalances := len(Balances.List())
 
 	// 3 redacts of the same balance:
 	Balances.Add(
