@@ -29,12 +29,12 @@ func (br *BalanceRegistry) List() (balances []Balance) {
 
 	m := make(map[ID]int)
 
-	for i, balance := range br.Items {
+	for _, balance := range br.Items {
 		n, oldVer := m[balance.ID]
 		if oldVer {
 			balances[n] = balance
 		} else {
-			m[balance.ID] = i
+			m[balance.ID] = len(balances)
 			balances = append(balances, balance)
 		}
 	}
