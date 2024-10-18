@@ -23,6 +23,24 @@ type BalanceRegistry struct {
 	sync.RWMutex
 }
 
+func (br *BalanceRegistry) List() (balances []Balance) {
+	br.RLock()
+	defer br.RUnlock()
+
+	m := make(map[ID]int)
+
+	for i, balance := range br.Items {
+		n, oldVer := m[balance.ID]
+		if oldVer {
+			balances[n] = balance
+		} else {
+			m[balance.ID] = i
+			balances = append(balances, balance)
+		}
+	}
+	return
+}
+
 // Find a balance of given account transaction.
 func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	br.RLock()
