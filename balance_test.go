@@ -137,3 +137,34 @@ func TestChangeBalance(t *testing.T) {
 	})
 
 }
+
+func TestListBalance(t *testing.T) {
+
+	t.Parallel()
+
+	aid := CreateID()
+	bid := CreateID()
+	tid := CreateID()
+
+	val := func(v float64) int64 { return int64(v * Million) }
+
+	lenBalances := len(Balances.Items)
+
+	// 3 redacts of the same balance:
+	Balances.Add(
+		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.11)})
+	Balances.Add(
+		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.12)})
+	Balances.Add(
+		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(3.15)})
+
+	bid2 := CreateID()
+	Balances.Add(
+		Balance{ID: bid2, Account: aid, Transaction: tid, Time: time.Now(), Value: val(31.76)})
+
+	balances := Balances.List()
+	if len(balances) != 2+lenBalances {
+		t.Errorf("expected balances length: 2, got: %d", len(balances))
+	}
+	t.Logf("%#v", balances)
+}
