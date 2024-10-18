@@ -148,8 +148,6 @@ func TestListBalance(t *testing.T) {
 
 	val := func(v float64) int64 { return int64(v * Million) }
 
-	lenBalances := len(Balances.List())
-
 	// 3 redacts of the same balance:
 	Balances.Add(
 		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.11)})
@@ -159,12 +157,21 @@ func TestListBalance(t *testing.T) {
 		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(3.15)})
 
 	bid2 := CreateID()
-	Balances.Add(
-		Balance{ID: bid2, Account: aid, Transaction: tid, Time: time.Now(), Value: val(31.76)})
+	tid2 := CreateID()
 
-	balances := Balances.List()
-	if len(balances) != 2+lenBalances {
-		t.Errorf("expected balances length: 2, got: %d", len(balances))
+	Balances.Add(
+		Balance{ID: bid2, Account: aid, Transaction: tid2, Time: time.Now(), Value: val(1.76)})
+
+	tBalances := make(map[ID]int)
+	for _, b := range Balances.List() {
+		tBalances[b.Transaction]++
 	}
-	t.Logf("%#v", balances)
+
+	if tBalances[tid] != 1 {
+		t.Errorf("expected 1 last redaction of balance, found: %d", tBalances[tid])
+	}
+
+	if tBalances[tid2] != 1 {
+		t.Errorf("expected 1 last redaction of balance[%s], found: %d", tid2, tBalances[tid2])
+	}
 }
