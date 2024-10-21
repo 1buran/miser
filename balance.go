@@ -14,6 +14,7 @@ type Balance struct {
 	ID, Account, Transaction ID
 	Value                    int64
 	Time                     time.Time
+	Deleted                  bool
 }
 
 type BalanceRegistry struct {
@@ -30,6 +31,9 @@ func (br *BalanceRegistry) List() (balances []Balance) {
 	m := make(map[ID]int)
 
 	for _, balance := range br.Items {
+		if balance.Deleted {
+			continue
+		}
 		n, oldVer := m[balance.ID]
 		if oldVer {
 			balances[n] = balance
@@ -47,7 +51,7 @@ func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	defer br.RUnlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
-		if item.Account == accID && item.Transaction == trID {
+		if !item.Deleted && item.Account == accID && item.Transaction == trID {
 			return &item
 		}
 	}
@@ -59,11 +63,52 @@ func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
 	br.RLock()
 	defer br.RUnlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
-		if br.Items[i].Account == accID {
+		if !br.Items[i].Deleted && br.Items[i].Account == accID {
 			return &br.Items[i]
 		}
 	}
 	return nil
+}
+
+// Find a balance of account before given time.
+func (br *BalanceRegistry) AccountBalanceBefore(accID ID, t time.Time) *Balance {
+	br.RLock()
+	defer br.RUnlock()
+	for i := len(br.Items) - 1; i >= 0; i-- {
+		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.Before(t) {
+			return &br.Items[i]
+		}
+	}
+	return nil
+}
+
+// Find a balance of account after given time.
+func (br *BalanceRegistry) AccountBalanceAfter(accID ID, t time.Time) *Balance {
+	br.RLock()
+	defer br.RUnlock()
+	for i := 0; i < len(br.Items); i++ {
+		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.After(t) {
+			return &br.Items[i]
+		}
+	}
+	return nil
+}
+
+// Rebalance account balance after changes.
+func (br *BalanceRegistry) rebalanceAccountBalanceAfter(accID ID, t time.Time, fix int64) (changes []*Balance) {
+	br.RLock()
+	defer br.RUnlock()
+	for i := 0; i < len(br.Items); i++ {
+		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.After(t) {
+			b := br.Items[i]
+			b.Deleted = true // mark old one as deleted
+			changes = append(
+				changes, &b, &Balance{ // create another one with fixed balance
+					ID: CreateID(), Account: b.Account, Transaction: b.Transaction,
+					Time: b.Time, Value: b.Value + fix})
+		}
+	}
+	return
 }
 
 func (br *BalanceRegistry) AccountValue(accID ID) float64 {
@@ -81,6 +126,9 @@ func (br *BalanceRegistry) Update(b Balance) {
 	defer br.Unlock()
 	for i := len(br.Items) - 1; i >= 0; i-- {
 		item := br.Items[i]
+		if item.Deleted {
+			continue
+		}
 		if item.ID == b.ID {
 			item = b
 			break
@@ -128,7 +176,7 @@ func SaveBalances() (int, error) { return Save(&Balances, BALANCE_FILE) }
 //
 
 // Credit - source, Debit - destination
-func UpdateBalance(accID, trID ID, accType string, operType int, value int64) {
+func UpdateBalance(accID, trID ID, accType string, operType int, trTime time.Time, value int64) {
 	switch operType {
 	case Credit:
 		if accType == Asset || accType == Expense {
@@ -140,16 +188,29 @@ func UpdateBalance(accID, trID ID, accType string, operType int, value int64) {
 		}
 	}
 
-	b := Balances.AccountBalance(accID)
+	b := Balances.AccountBalanceBefore(accID, trTime)
 	if b == nil {
 		panic("tried update nil balance, account ID:" + accID)
 	}
+
 	value += b.Value
-	CreateBalance(accID, trID, value)
+
+	CreateBalance(accID, trID, trTime, value)
+
+	b2 := Balances.AccountBalanceAfter(accID, trTime)
+	if b2 != nil {
+		// new delta between balance changes
+		fix := value - b2.Value
+
+		for _, change := range Balances.rebalanceAccountBalanceAfter(accID, trTime, fix) {
+			Balances.Add(*change)
+			Balances.AddQueued(*change)
+		}
+	}
 }
 
 // Create balance for an account
-func CreateBalance(accID, trID ID, value int64) *Balance {
+func CreateBalance(accID, trID ID, t time.Time, value int64) *Balance {
 	b := Balance{ID: CreateID(), Account: accID, Transaction: trID, Value: value, Time: time.Now()}
 	Balances.Add(b)
 	Balances.AddQueued(b)

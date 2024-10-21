@@ -51,12 +51,12 @@ func (tr *TransactionRegistry) List() (transactions []Transaction) {
 
 	m := make(map[ID]int)
 
-	for i, transa := range tr.Items {
+	for _, transa := range tr.Items {
 		n, oldVersion := m[transa.ID]
 		if oldVersion {
 			transactions[n] = transa
 		} else {
-			m[transa.ID] = i
+			m[transa.ID] = len(transactions)
 			transactions = append(transactions, transa)
 		}
 	}
@@ -127,8 +127,8 @@ func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transac
 	Transactions.Add(tr)
 	Transactions.AddQueued(tr)
 
-	UpdateBalance(src, tr.ID, string(srcAcc.Type), Credit, value)
-	UpdateBalance(dst, tr.ID, string(dstAcc.Type), Debit, value)
+	UpdateBalance(src, tr.ID, string(srcAcc.Type), Credit, tr.Time, value)
+	UpdateBalance(dst, tr.ID, string(dstAcc.Type), Debit, tr.Time, value)
 
 	return &tr, nil
 }

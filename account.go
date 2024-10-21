@@ -110,7 +110,7 @@ func CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
 
 	v := int64(initBalance * Million)
 	tr := CreateInitialTransaction(acc.ID, v)
-	b := CreateBalance(acc.ID, tr.ID, v)
+	b := CreateBalance(acc.ID, tr.ID, tr.Time, v)
 
 	tag := Tags.GetByName(Initial)
 	if tag == nil {
