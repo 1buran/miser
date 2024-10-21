@@ -110,7 +110,16 @@ func CreateTransation(src, dst ID, t time.Time, v float64, txt string) (*Transac
 		return nil, errors.New("dst account not found")
 	}
 
+	if t.Before(srcAcc.OpenedAt) || t.Before(dstAcc.OpenedAt) {
+		return nil, errors.New("transaction cannot be before the account is opened")
+	}
+
 	value := int64(v * Million)
+
+	b := Balances.AccountBalance(src)
+	if b.Value < value {
+		return nil, errors.New("you cannot trasfer more money than you have")
+	}
 
 	if srcAcc.Type == dstAcc.Type {
 		return nil, errors.New("cannot be transferred to same type of account")
