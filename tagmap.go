@@ -17,24 +17,24 @@ type TagMapRegistry struct {
 }
 
 func (tm *TagMapRegistry) Create(tagID, itemID ID) {
-	tm := TagMap{Tag: tagID, Item: itemID}
-	tm.Add(tm)
-	tm.AddQueued(tm)
+	t := TagMap{Tag: tagID, Item: itemID}
+	tm.Add(t)
+	tm.AddQueued(t)
 }
 
-func (tm *TagMapRegistry) Add(tm TagMap) int {
+func (tm *TagMapRegistry) Add(t TagMap) int {
 	tm.Lock()
 	defer tm.Unlock()
 
-	tm.items = append(tm.items, tm)
+	tm.items = append(tm.items, t)
 	return 1
 }
 
-func (tm *TagMapRegistry) AddQueued(tm TagMap) {
+func (tm *TagMapRegistry) AddQueued(t TagMap) {
 	tm.Lock()
 	defer tm.Unlock()
 
-	tm.queued = append(tm.queued, tm)
+	tm.queued = append(tm.queued, t)
 }
 
 func (tm *TagMapRegistry) SyncQueued() []TagMap {
