@@ -17,9 +17,10 @@ func main() {
 	ar := miser.CreateAccountRegistry()
 	tr := miser.CreateTransactionRegistry()
 	br := miser.CreateBalanceRegistry()
+	cr := miser.CreateCurrencyRegistry()
 
 	// Create service:
-	l := miser.CreateLedger(ar, br, tr)
+	l := miser.CreateLedger(ar, br, tr, cr)
 
 	n, err := ar.Load()
 	fmt.Println(strings.Repeat("---", 40))

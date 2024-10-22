@@ -13,9 +13,10 @@ func TestInitBalance(t *testing.T) {
 	ar := CreateAccountRegistry()
 	tr := CreateTransactionRegistry()
 	br := CreateBalanceRegistry()
+	cr := CreateCurrencyRegistry()
 
 	// Create service:
-	l := CreateLedger(ar, br, tr)
+	l := CreateLedger(ar, br, tr, cr)
 
 	t.Run("zero", func(t *testing.T) {
 		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
@@ -63,9 +64,10 @@ func TestChangeBalance(t *testing.T) {
 	ar := CreateAccountRegistry()
 	tr := CreateTransactionRegistry()
 	br := CreateBalanceRegistry()
+	cr := CreateCurrencyRegistry()
 
 	// Create service:
-	l := CreateLedger(ar, br, tr)
+	l := CreateLedger(ar, br, tr, cr)
 
 	t.Run("Expense", func(t *testing.T) {
 		cash, err := l.CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)

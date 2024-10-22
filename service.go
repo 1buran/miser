@@ -11,10 +11,11 @@ type Ledger struct {
 	tr *TransactionRegistry
 	ar *AccountRegistry
 	br *BalanceRegistry
+	cr *CurrencyRegistry
 }
 
-func CreateLedger(ar *AccountRegistry, br *BalanceRegistry, tr *TransactionRegistry) *Ledger {
-	return &Ledger{ar: ar, tr: tr, br: br}
+func CreateLedger(ar *AccountRegistry, br *BalanceRegistry, tr *TransactionRegistry, cr *CurrencyRegistry) *Ledger {
+	return &Ledger{ar: ar, tr: tr, br: br, cr: cr}
 }
 
 func (l *Ledger) CreateInitialTransaction(accID ID, v int64) *Transaction {
@@ -88,7 +89,7 @@ func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account
 		return nil, fmt.Errorf("wrong type of account: %s", t)
 	}
 
-	if supported, _, _ := Currency(c); !supported {
+	if cur := l.cr.Get(c); cur == nil {
 		return nil, fmt.Errorf("currency %q is not supproted", c)
 	}
 
@@ -175,6 +176,9 @@ func (l *Ledger) UpdateBalance(accID, trID ID, accType string, operType int, trT
 
 func (l *Ledger) AmountTransaction(t *Transaction) string {
 	acc := l.ar.Get(t.Source)
-	_, _, symbol := Currency(string(acc.Cur))
-	return fmt.Sprintf("%c %.2f", symbol, float64(t.Value)/Million)
+	c := l.cr.Get(string(acc.Cur))
+	if c != nil {
+		return fmt.Sprintf("%s %.2f", c.Sign, float64(t.Value)/Million)
+	}
+	return fmt.Sprintf("%.2f", float64(t.Value)/Million)
 }
