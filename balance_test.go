@@ -9,13 +9,21 @@ func TestInitBalance(t *testing.T) {
 
 	t.Parallel()
 
+	// Create repositories:
+	ar := CreateAccountRegistry()
+	tr := CreateTransactionRegistry()
+	br := CreateBalanceRegistry()
+
+	// Create service:
+	l := CreateLedger(ar, br, tr)
+
 	t.Run("zero", func(t *testing.T) {
-		acc, err := CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
+		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		b := Balances.AccountBalance(acc.ID)
+		b := l.br.AccountBalance(acc.ID)
 		if b == nil {
 			t.Fatal("balance was not created during account creation")
 		}
@@ -37,12 +45,12 @@ func TestInitBalance(t *testing.T) {
 	})
 
 	t.Run("float", func(t *testing.T) {
-		acc, err := CreateAccount("Deposit", Asset, "deposit account", "USD", 123.78)
+		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 123.78)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if amount := Balances.AccountValue(acc.ID); amount != 123.78 {
+		if amount := l.br.AccountValue(acc.ID); amount != 123.78 {
 			t.Errorf("expected 123.78, got: %f", amount)
 		}
 	})
@@ -51,31 +59,39 @@ func TestInitBalance(t *testing.T) {
 func TestChangeBalance(t *testing.T) {
 	t.Parallel()
 
+	// Create repositories:
+	ar := CreateAccountRegistry()
+	tr := CreateTransactionRegistry()
+	br := CreateBalanceRegistry()
+
+	// Create service:
+	l := CreateLedger(ar, br, tr)
+
 	t.Run("Expense", func(t *testing.T) {
-		cash, err := CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)
+		cash, err := l.CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		market, err := CreateAccount("Market", Expense, "holiday market", "USD", 343.11)
+		market, err := l.CreateAccount("Market", Expense, "holiday market", "USD", 343.11)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if openMarketBalance := Balances.AccountValue(market.ID); openMarketBalance != 343.11 {
+		if openMarketBalance := l.br.AccountValue(market.ID); openMarketBalance != 343.11 {
 			t.Errorf("expected 344.64, got: %.2f", openMarketBalance)
 		}
 
-		_, err = CreateTransation(cash.ID, market.ID, time.Now(), 1.53, "1kg carrot")
+		_, err = l.CreateTransaction(cash.ID, market.ID, time.Now(), 1.53, "1kg carrot")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if amount := Balances.AccountValue(cash.ID); amount != 1553.59 {
+		if amount := l.br.AccountValue(cash.ID); amount != 1553.59 {
 			t.Errorf("expected 1553.59, got: %.2f", amount)
 		}
 
-		if updateMarketBalance := Balances.AccountValue(market.ID); updateMarketBalance != 344.64 {
+		if updateMarketBalance := l.br.AccountValue(market.ID); updateMarketBalance != 344.64 {
 			t.Errorf("expected 344.64, got: %.2f", updateMarketBalance)
 		}
 
@@ -84,22 +100,22 @@ func TestChangeBalance(t *testing.T) {
 	t.Run("Earnings", func(t *testing.T) {
 		var buyers []Account
 		for i := 0; i < 5; i++ {
-			acc, _ := CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)
+			acc, _ := l.CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)
 			buyers = append(buyers, *acc)
 		}
 
-		market, err := CreateAccount("Market", Expense, "holiday market", "USD", 343.11)
+		market, err := l.CreateAccount("Market", Expense, "holiday market", "USD", 343.11)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		openMarketBalance := Balances.AccountBalance(market.ID)
+		openMarketBalance := l.br.AccountBalance(market.ID)
 		t.Logf("open market balance: %#v", openMarketBalance)
 		for i := 0; i < 5; i++ { // buy 5 kg of carrot
-			_, _ = CreateTransation(buyers[i].ID, market.ID, time.Now(), 1.53, "1kg carrot")
+			_, _ = l.CreateTransaction(buyers[i].ID, market.ID, time.Now(), 1.53, "1kg carrot")
 		}
 
-		closeMarketBalance := Balances.AccountBalance(market.ID)
+		closeMarketBalance := l.br.AccountBalance(market.ID)
 		t.Logf("close market balance: %#v", closeMarketBalance)
 
 		earnings := float64(closeMarketBalance.Value-openMarketBalance.Value) / Million
@@ -113,22 +129,22 @@ func TestChangeBalance(t *testing.T) {
 		var pubs []Account
 
 		for i := 0; i < 5; i++ {
-			acc, _ := CreateAccount("Shop", Asset, "LC Waikiki", "USD", 15.12)
+			acc, _ := l.CreateAccount("Shop", Asset, "LC Waikiki", "USD", 15.12)
 			pubs = append(pubs, *acc)
 		}
 
-		cash, err := CreateAccount("Cash", Expense, "wallet", "USD", 343.11)
+		cash, err := l.CreateAccount("Cash", Expense, "wallet", "USD", 343.11)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		openPartyBalance := Balances.AccountBalance(cash.ID)
+		openPartyBalance := l.br.AccountBalance(cash.ID)
 
 		for i := 0; i < 5; i++ { // buy 5 kg of carrot
-			_, _ = CreateTransation(cash.ID, pubs[i].ID, time.Now(), 1.53, "1 bear")
+			_, _ = l.CreateTransaction(cash.ID, pubs[i].ID, time.Now(), 1.53, "1 bear")
 		}
 
-		closePartyBalance := Balances.AccountBalance(cash.ID)
+		closePartyBalance := l.br.AccountBalance(cash.ID)
 
 		spendings := float64(closePartyBalance.Value-openPartyBalance.Value) / Million
 		if spendings != -7.65 {
@@ -142,6 +158,8 @@ func TestListBalance(t *testing.T) {
 
 	t.Parallel()
 
+	br := CreateBalanceRegistry()
+
 	aid := CreateID()
 	bid := CreateID()
 	tid := CreateID()
@@ -149,21 +167,21 @@ func TestListBalance(t *testing.T) {
 	val := func(v float64) int64 { return int64(v * Million) }
 
 	// 3 redacts of the same balance:
-	Balances.Add(
+	br.Add(
 		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.11)})
-	Balances.Add(
+	br.Add(
 		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.12)})
-	Balances.Add(
+	br.Add(
 		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(3.15)})
 
 	bid2 := CreateID()
 	tid2 := CreateID()
 
-	Balances.Add(
+	br.Add(
 		Balance{ID: bid2, Account: aid, Transaction: tid2, Time: time.Now(), Value: val(1.76)})
 
 	tBalances := make(map[ID]int)
-	for _, b := range Balances.List() {
+	for _, b := range br.List() {
 		tBalances[b.Transaction]++
 	}
 

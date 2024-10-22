@@ -18,8 +18,8 @@ type Balance struct {
 }
 
 type BalanceRegistry struct {
-	Items  []Balance // all items loaded from disk
-	Queued []Balance // queue of items for sync to disk
+	items  []Balance // all items loaded from disk
+	queued []Balance // queue of items for sync to disk
 
 	sync.RWMutex
 }
@@ -30,7 +30,7 @@ func (br *BalanceRegistry) List() (balances []Balance) {
 
 	m := make(map[ID]int)
 
-	for _, balance := range br.Items {
+	for _, balance := range br.items {
 		if balance.Deleted {
 			continue
 		}
@@ -49,8 +49,8 @@ func (br *BalanceRegistry) List() (balances []Balance) {
 func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	br.RLock()
 	defer br.RUnlock()
-	for i := len(br.Items) - 1; i >= 0; i-- {
-		item := br.Items[i]
+	for i := len(br.items) - 1; i >= 0; i-- {
+		item := br.items[i]
 		if !item.Deleted && item.Account == accID && item.Transaction == trID {
 			return &item
 		}
@@ -62,9 +62,9 @@ func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
 	br.RLock()
 	defer br.RUnlock()
-	for i := len(br.Items) - 1; i >= 0; i-- {
-		if !br.Items[i].Deleted && br.Items[i].Account == accID {
-			return &br.Items[i]
+	for i := len(br.items) - 1; i >= 0; i-- {
+		if !br.items[i].Deleted && br.items[i].Account == accID {
+			return &br.items[i]
 		}
 	}
 	return nil
@@ -74,9 +74,9 @@ func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
 func (br *BalanceRegistry) AccountBalanceBefore(accID ID, t time.Time) *Balance {
 	br.RLock()
 	defer br.RUnlock()
-	for i := len(br.Items) - 1; i >= 0; i-- {
-		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.Before(t) {
-			return &br.Items[i]
+	for i := len(br.items) - 1; i >= 0; i-- {
+		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.Before(t) {
+			return &br.items[i]
 		}
 	}
 	return nil
@@ -86,9 +86,9 @@ func (br *BalanceRegistry) AccountBalanceBefore(accID ID, t time.Time) *Balance 
 func (br *BalanceRegistry) AccountBalanceAfter(accID ID, t time.Time) *Balance {
 	br.RLock()
 	defer br.RUnlock()
-	for i := 0; i < len(br.Items); i++ {
-		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.After(t) {
-			return &br.Items[i]
+	for i := 0; i < len(br.items); i++ {
+		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.After(t) {
+			return &br.items[i]
 		}
 	}
 	return nil
@@ -98,9 +98,9 @@ func (br *BalanceRegistry) AccountBalanceAfter(accID ID, t time.Time) *Balance {
 func (br *BalanceRegistry) rebalanceAccountBalanceAfter(accID ID, t time.Time, fix int64) (changes []*Balance) {
 	br.RLock()
 	defer br.RUnlock()
-	for i := 0; i < len(br.Items); i++ {
-		if !br.Items[i].Deleted && br.Items[i].Account == accID && br.Items[i].Time.After(t) {
-			b := br.Items[i]
+	for i := 0; i < len(br.items); i++ {
+		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.After(t) {
+			b := br.items[i]
 			b.Deleted = true // mark old one as deleted
 			changes = append(
 				changes, &b, &Balance{ // create another one with fixed balance
@@ -124,8 +124,8 @@ func (br *BalanceRegistry) AccountValue(accID ID) float64 {
 func (br *BalanceRegistry) Update(b Balance) {
 	br.Lock()
 	defer br.Unlock()
-	for i := len(br.Items) - 1; i >= 0; i-- {
-		item := br.Items[i]
+	for i := len(br.items) - 1; i >= 0; i-- {
+		item := br.items[i]
 		if item.Deleted {
 			continue
 		}
@@ -140,82 +140,25 @@ func (br *BalanceRegistry) Update(b Balance) {
 func (br *BalanceRegistry) Add(b Balance) int {
 	br.Lock()
 	defer br.Unlock()
-	br.Items = append(br.Items, b)
+	br.items = append(br.items, b)
 	return 1
 }
 
 func (br *BalanceRegistry) AddQueued(b Balance) {
 	br.Lock()
 	defer br.Unlock()
-	br.Queued = append(br.Queued, b)
+	br.queued = append(br.queued, b)
 }
 
 func (br *BalanceRegistry) SyncQueued() []Balance {
 	br.RLock()
 	defer br.RUnlock()
-	return br.Queued
+	return br.queued
 }
 
-var Balances = BalanceRegistry{}
-
-func LoadBalances() (int, error) { return Load(&Balances, BALANCE_FILE) }
-func SaveBalances() (int, error) { return Save(&Balances, BALANCE_FILE) }
-
-// Account Type  | Effect on Account Balance
-// ------------------------------------------
-// --------------|    Debit     |   Credit
-// --------------|---------------------------
-// Assets        |              |
-//               | Increase     |  Decrease
-// Expenses      |              |
-// -------------------------------------------
-// Liabilities   |              |
-// Equity        | Decrease     |  Increase
-// Income        |              |
-// -------------------------------------------
-//
-
-// Credit - source, Debit - destination
-func UpdateBalance(accID, trID ID, accType string, operType int, trTime time.Time, value int64) {
-	switch operType {
-	case Credit:
-		if accType == Asset || accType == Expense {
-			value = -value
-		}
-	case Debit:
-		if accType == Liability || accType == Equity || accType == Income {
-			value = -value
-		}
-	}
-
-	b := Balances.AccountBalanceBefore(accID, trTime)
-	if b == nil {
-		panic("tried update nil balance, account ID:" + accID)
-	}
-
-	value += b.Value
-
-	CreateBalance(accID, trID, trTime, value)
-
-	b2 := Balances.AccountBalanceAfter(accID, trTime)
-	if b2 != nil {
-		// new delta between balance changes
-		fix := value - b2.Value
-
-		for _, change := range Balances.rebalanceAccountBalanceAfter(accID, trTime, fix) {
-			Balances.Add(*change)
-			Balances.AddQueued(*change)
-		}
-	}
-}
-
-// Create balance for an account
-func CreateBalance(accID, trID ID, t time.Time, value int64) *Balance {
-	b := Balance{ID: CreateID(), Account: accID, Transaction: trID, Value: value, Time: time.Now()}
-	Balances.Add(b)
-	Balances.AddQueued(b)
-	return &b
-}
+func CreateBalanceRegistry() *BalanceRegistry  { return &BalanceRegistry{} }
+func (br *BalanceRegistry) Load() (int, error) { return Load(br, BALANCE_FILE) }
+func (br *BalanceRegistry) Save() (int, error) { return Save(br, BALANCE_FILE) }
 
 // The rearranged accounting equation:
 // Assets + Expenses = Liabilities + Equity + Income

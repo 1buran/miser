@@ -10,41 +10,54 @@ import (
 )
 
 func main() {
+	// Initialization of cypher:
 	miser.InitCypher(strings.Repeat("0123", 8))
 
-	n, err := miser.LoadAccounts()
+	// Create repositories:
+	ar := miser.CreateAccountRegistry()
+	tr := miser.CreateTransactionRegistry()
+	br := miser.CreateBalanceRegistry()
+
+	// Create service:
+	l := miser.CreateLedger(ar, br, tr)
+
+	n, err := ar.Load()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d accounts loaded, err: %v\n", n, err)
-	fmt.Printf("Accounts: %#v\n", miser.Accounts.Items)
+	fmt.Printf("Accounts: %#v\n", ar.List())
 
-	n, err = miser.LoadTransactions()
+	n, err = tr.Load()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d transactions loaded, err: %v\n", n, err)
-	fmt.Printf("Accounts: %#v\n", miser.Transactions.Items)
+	fmt.Printf("Transactions: %#v\n", tr.List())
 
-	n, err = miser.LoadBalances()
+	n, err = br.Load()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d balances loaded, err: %v\n", n, err)
-	fmt.Printf("Balances: %#v\n", miser.Balances.Items)
+	fmt.Printf("Balances: %#v\n", br.List())
 	//	fmt.Println("check balance:", miser.CheckBalance())
 
+	// todo
 	n, err = miser.LoadTags()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d tags loaded, err: %v\n", n, err)
-	fmt.Printf("Balances: %#v\n", miser.Tags.Items)
+	fmt.Printf("Tags: %#v\n", miser.Tags.Items)
 
+	// todo
 	n, err = miser.LoadTagsMap()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d tags map loaded, err: %v\n", n, err)
-	fmt.Printf("Balances: %#v\n", miser.TagsMap.Items)
+	fmt.Printf("TagsMap: %#v\n", miser.TagsMap.Items)
 
-	ac1, err := miser.CreateAccount("SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
+	ac1, err := l.CreateAccount(
+		"SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	Aeon, err := miser.CreateAccount("AEON Supermarket", miser.Expense, "work bank account", "JPY", 0)
+	Aeon, err := l.CreateAccount(
+		"AEON Supermarket", miser.Expense, "work bank account", "JPY", 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -67,17 +80,17 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 
-	ac1B := miser.Balances.AccountValue(ac1.ID)
+	ac1B := br.AccountValue(ac1.ID)
 	fmt.Printf("Balance of SMBC before transaction: %.2f\n", ac1B)
 
-	t1, err := miser.CreateTransation(ac1.ID, Aeon.ID, time.Now(), 112.56, "私は店に行き、卵2kgと小麦粉を買いました。")
+	t1, err := l.CreateTransaction(ac1.ID, Aeon.ID, time.Now(), 112.56, "私は店に行き、卵2kgと小麦粉を買いました。")
 	if err != nil {
 		fmt.Println("create transaction failure:", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Transaction: %#v\n", t1)
 
-	ac1B = miser.Balances.AccountValue(ac1.ID)
+	ac1B = br.AccountValue(ac1.ID)
 	fmt.Printf("Balance of SMBC after transaction: %.2f\n", ac1B)
 
 	b, err = json.Marshal(t1)
@@ -96,20 +109,22 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 	fmt.Printf("\n%#v\n", t1e)
-	fmt.Println("Amount:", t1.Amount())
-	fmt.Println("Balances:", miser.Balances)
+	fmt.Println("Amount:", l.AmountTransaction(t1))
+	fmt.Println("Balances:", br)
 	// fmt.Println("check balance:", miser.CheckBalance())
 
-	n, err = miser.SyncAccounts()
+	n, err = ar.Save()
 	fmt.Printf("%d new accounts saved, err: %v\n", n, err)
-	n, err = miser.SyncTransactions()
+	n, err = tr.Save()
 	fmt.Printf("%d new transactions saved, err: %v\n", n, err)
-	n, err = miser.SaveBalances()
+	n, err = br.Save()
 	fmt.Printf("%d balances saved, err: %v\n", n, err)
 
+	// todo
 	n, err = miser.SaveTags()
 	fmt.Printf("%d tags saved, err: %v\n", n, err)
+
+	//todo
 	n, err = miser.SaveTagsMap()
 	fmt.Printf("%d tags map saved, err: %v\n", n, err)
-
 }
