@@ -8,13 +8,13 @@ import (
 	"io"
 )
 
+var cypher Cypher
+
 // Cypher provides ecrypt and decrypt methods.
 type Cypher struct {
 	encrypt func(b []byte) ([]byte, error)
 	decrypt func(b []byte) ([]byte, error)
 }
-
-var cypher Cypher
 
 // Init cypher service for a given key.
 func InitCypher(key string) {
@@ -26,6 +26,30 @@ func InitCypher(key string) {
 			return encryptor(key, b)
 		},
 	}
+}
+
+type EncryptedString string
+
+func (s EncryptedString) MarshalJSON() ([]byte, error) {
+	b, err := cypher.encrypt([]byte(s))
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(b)
+}
+
+func (s *EncryptedString) UnmarshalJSON(b []byte) error {
+	var b1 []byte
+	if err := json.Unmarshal(b, &b1); err != nil {
+		return err
+	}
+
+	dec, err := cypher.decrypt(b1)
+	if err != nil {
+		return err
+	}
+	*s = EncryptedString(dec)
+	return nil
 }
 
 func encryptor(key string, b []byte) (encrypted []byte, err error) {
@@ -69,28 +93,4 @@ func decryptor(key string, b []byte) (decrypted []byte, err error) {
 	}
 
 	return
-}
-
-type EncryptedString string
-
-func (s EncryptedString) MarshalJSON() ([]byte, error) {
-	b, err := cypher.encrypt([]byte(s))
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(b)
-}
-
-func (s *EncryptedString) UnmarshalJSON(b []byte) error {
-	var b1 []byte
-	if err := json.Unmarshal(b, &b1); err != nil {
-		return err
-	}
-
-	dec, err := cypher.decrypt(b1)
-	if err != nil {
-		return err
-	}
-	*s = EncryptedString(dec)
-	return nil
 }
