@@ -8,9 +8,27 @@ import (
 	"io"
 )
 
-var Encryptor, Decryptor func(b []byte) ([]byte, error)
+// Cypher provides ecrypt and decrypt methods.
+type Cypher struct {
+	encrypt func(b []byte) ([]byte, error)
+	decrypt func(b []byte) ([]byte, error)
+}
 
-func encrypt(key string, b []byte) (encrypted []byte, err error) {
+var cypher Cypher
+
+// Init cypher service for a given key.
+func InitCypher(key string) {
+	cypher = Cypher{
+		decrypt: func(b []byte) ([]byte, error) {
+			return decryptor(key, b)
+		},
+		encrypt: func(b []byte) ([]byte, error) {
+			return encryptor(key, b)
+		},
+	}
+}
+
+func encryptor(key string, b []byte) (encrypted []byte, err error) {
 
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
@@ -31,7 +49,7 @@ func encrypt(key string, b []byte) (encrypted []byte, err error) {
 	return
 }
 
-func decrypt(key string, b []byte) (decrypted []byte, err error) {
+func decryptor(key string, b []byte) (decrypted []byte, err error) {
 
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
@@ -53,22 +71,10 @@ func decrypt(key string, b []byte) (decrypted []byte, err error) {
 	return
 }
 
-func CreateEncryptor(key string) func(b []byte) ([]byte, error) {
-	return func(b []byte) ([]byte, error) {
-		return encrypt(key, b)
-	}
-}
-
-func CreateDecryptor(key string) func(b []byte) ([]byte, error) {
-	return func(b []byte) ([]byte, error) {
-		return decrypt(key, b)
-	}
-}
-
 type EncryptedString string
 
 func (s EncryptedString) MarshalJSON() ([]byte, error) {
-	b, err := Encryptor([]byte(s))
+	b, err := cypher.encrypt([]byte(s))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +87,7 @@ func (s *EncryptedString) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	dec, err := Decryptor(b1)
+	dec, err := cypher.decrypt(b1)
 	if err != nil {
 		return err
 	}

@@ -10,8 +10,7 @@ import (
 )
 
 func main() {
-	miser.Encryptor = miser.CreateEncryptor(strings.Repeat("0123", 8))
-	miser.Decryptor = miser.CreateDecryptor(strings.Repeat("0123", 8))
+	miser.InitCypher(strings.Repeat("0123", 8))
 
 	n, err := miser.LoadAccounts()
 	fmt.Println(strings.Repeat("---", 40))

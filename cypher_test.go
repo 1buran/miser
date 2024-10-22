@@ -14,8 +14,8 @@ type TestData struct {
 func TestEncryptDecrypt(t *testing.T) {
 	t.Parallel()
 
-	t.Run("encrypt", func(t *testing.T) {
-		b, err := encrypt(strings.Repeat("secret k", 4), []byte("some text"))
+	t.Run("encryptor", func(t *testing.T) {
+		b, err := encryptor(strings.Repeat("secret k", 4), []byte("some text"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -26,9 +26,9 @@ func TestEncryptDecrypt(t *testing.T) {
 		}
 	})
 
-	t.Run("decrypt", func(t *testing.T) {
-		b, _ := encrypt(strings.Repeat("secret k", 4), []byte("some text"))
-		dec, err := decrypt(strings.Repeat("secret k", 4), b)
+	t.Run("decryptor", func(t *testing.T) {
+		b, _ := encryptor(strings.Repeat("secret k", 4), []byte("some text"))
+		dec, err := decryptor(strings.Repeat("secret k", 4), b)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,8 +39,8 @@ func TestEncryptDecrypt(t *testing.T) {
 	})
 
 	t.Run("wrong key", func(t *testing.T) {
-		b, _ := encrypt(strings.Repeat("secret k", 4), []byte("some text"))
-		_, err := decrypt(strings.Repeat("sAcrAt A", 4), b)
+		b, _ := encryptor(strings.Repeat("secret k", 4), []byte("some text"))
+		_, err := decryptor(strings.Repeat("sAcrAt A", 4), b)
 		if err == nil {
 			t.Error("error expected, nil found")
 		} else {
@@ -52,10 +52,9 @@ func TestEncryptDecrypt(t *testing.T) {
 func TestEncryptedString(t *testing.T) {
 	t.Parallel()
 
-	t.Run("JSON marshaling", func(t *testing.T) {
-		Encryptor = CreateEncryptor(strings.Repeat("0123", 8))
-		Decryptor = CreateDecryptor(strings.Repeat("0123", 8))
+	InitCypher(strings.Repeat("0123", 8))
 
+	t.Run("JSON marshaling", func(t *testing.T) {
 		data := TestData{Regular: "hello", Secret: "something hidden"}
 
 		b, err := json.Marshal(data)
@@ -73,9 +72,6 @@ func TestEncryptedString(t *testing.T) {
 	})
 
 	t.Run("JSON unmarshaling", func(t *testing.T) {
-		Encryptor = CreateEncryptor(strings.Repeat("0123", 8))
-		Decryptor = CreateDecryptor(strings.Repeat("0123", 8))
-
 		data := TestData{Regular: "hello", Secret: "something hidden"}
 
 		b, _ := json.Marshal(data)
@@ -91,18 +87,16 @@ func TestEncryptedString(t *testing.T) {
 		if data1.Secret != "something hidden" {
 			t.Errorf("Got unexpected string: %s", data1.Secret)
 		}
-
 	})
 
 	t.Run("JSON unmarshaling with wrong key", func(t *testing.T) {
-		Encryptor = CreateEncryptor(strings.Repeat("0123", 8))
-		Decryptor = CreateDecryptor(strings.Repeat("abcd", 8))
-
 		data := TestData{Regular: "hello", Secret: "something hidden"}
 
 		b, _ := json.Marshal(data)
 
 		data2 := TestData{}
+
+		InitCypher(strings.Repeat("abcd", 8))
 
 		if err := json.Unmarshal(b, &data2); err == nil {
 			t.Fatal("error auth failed expected")
