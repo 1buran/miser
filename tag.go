@@ -29,12 +29,12 @@ type TagRegistry struct {
 	sync.RWMutex
 }
 
-func (tr *TagRegistry) GetById(tagID ID) *Tag {
-	tr.RLock()
-	defer tr.RUnlock()
+func (tg *TagRegistry) GetById(tagID ID) *Tag {
+	tg.RLock()
+	defer tg.RUnlock()
 
-	for i := len(tr.items) - 1; i >= 0; i-- {
-		v := tr.items[i]
+	for i := len(tg.items) - 1; i >= 0; i-- {
+		v := tg.items[i]
 		if v.ID == tagID {
 			return &v
 		}
@@ -42,12 +42,12 @@ func (tr *TagRegistry) GetById(tagID ID) *Tag {
 	return nil
 }
 
-func (tr *TagRegistry) GetByName(n string) *Tag {
-	tr.RLock()
-	defer tr.RUnlock()
+func (tg *TagRegistry) GetByName(n string) *Tag {
+	tg.RLock()
+	defer tg.RUnlock()
 
-	for i := len(tr.items) - 1; i >= 0; i-- {
-		v := tr.items[i]
+	for i := len(tg.items) - 1; i >= 0; i-- {
+		v := tg.items[i]
 		if string(v.Name) == n {
 			return &v
 		}
@@ -55,47 +55,47 @@ func (tr *TagRegistry) GetByName(n string) *Tag {
 	return nil
 }
 
-func (tr *TagRegistry) Create(n string) *Tag {
+func (tg *TagRegistry) Create(n string) *Tag {
 	t := Tag{ID: CreateID(), Name: EncryptedString(n)}
-	tr.Add(t)
-	tr.AddQueued(t)
+	tg.Add(t)
+	tg.AddQueued(t)
 	return &t
 }
 
 // List all tags.
-func (tr *TagRegistry) List() map[ID]Tag {
-	tr.RLock()
-	defer tr.RUnlock()
+func (tg *TagRegistry) List() map[ID]Tag {
+	tg.RLock()
+	defer tg.RUnlock()
 
 	tags := make(map[ID]Tag)
-	for _, tag := range tr.items { // the last readed is the most actual version
+	for _, tag := range tg.items { // the last readed is the most actual version
 		tags[tag.ID] = tag
 	}
 	return tags
 }
 
-func (tr *TagRegistry) Add(t Tag) int {
-	tr.Lock()
-	defer tr.Unlock()
+func (tg *TagRegistry) Add(t Tag) int {
+	tg.Lock()
+	defer tg.Unlock()
 
-	tr.items = append(tr.items, t)
+	tg.items = append(tg.items, t)
 	return 1
 }
 
-func (tr *TagRegistry) AddQueued(t Tag) {
-	tr.Lock()
-	defer tr.Unlock()
+func (tg *TagRegistry) AddQueued(t Tag) {
+	tg.Lock()
+	defer tg.Unlock()
 
-	tr.queued = append(tr.queued, t)
+	tg.queued = append(tg.queued, t)
 }
 
-func (tr *TagRegistry) SyncQueued() []Tag {
-	tr.RLock()
-	defer tr.RUnlock()
+func (tg *TagRegistry) SyncQueued() []Tag {
+	tg.RLock()
+	defer tg.RUnlock()
 
-	return tr.queued
+	return tg.queued
 }
 
 func CreateTagRegistry() *TagRegistry      { return &TagRegistry{} }
-func (tr *TagRegistry) Load() (int, error) { return Load(tr, TAGS_FILE) }
-func (tr *TagRegistry) Save() (int, error) { return Save(tr, TAGS_FILE) }
+func (tg *TagRegistry) Load() (int, error) { return Load(tg, TAGS_FILE) }
+func (tg *TagRegistry) Save() (int, error) { return Save(tg, TAGS_FILE) }

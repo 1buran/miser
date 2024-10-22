@@ -16,43 +16,43 @@ type TagMapRegistry struct {
 	sync.RWMutex
 }
 
-func (tmr *TagMapRegistry) Create(tagID, itemID ID) {
+func (tm *TagMapRegistry) Create(tagID, itemID ID) {
 	tm := TagMap{Tag: tagID, Item: itemID}
-	tmr.Add(tm)
-	tmr.AddQueued(tm)
+	tm.Add(tm)
+	tm.AddQueued(tm)
 }
 
-func (tmr *TagMapRegistry) Add(tm TagMap) int {
-	tmr.Lock()
-	defer tmr.Unlock()
+func (tm *TagMapRegistry) Add(tm TagMap) int {
+	tm.Lock()
+	defer tm.Unlock()
 
-	tmr.items = append(tmr.items, tm)
+	tm.items = append(tm.items, tm)
 	return 1
 }
 
-func (tmr *TagMapRegistry) AddQueued(tm TagMap) {
-	tmr.Lock()
-	defer tmr.Unlock()
+func (tm *TagMapRegistry) AddQueued(tm TagMap) {
+	tm.Lock()
+	defer tm.Unlock()
 
-	tmr.queued = append(tmr.queued, tm)
+	tm.queued = append(tm.queued, tm)
 }
 
-func (tmr *TagMapRegistry) SyncQueued() []TagMap {
-	tmr.RLock()
-	defer tmr.RUnlock()
+func (tm *TagMapRegistry) SyncQueued() []TagMap {
+	tm.RLock()
+	defer tm.RUnlock()
 
-	return tmr.queued
+	return tm.queued
 }
 
-func CreateTagsMapRegistry() *TagMapRegistry   { return &TagMapRegistry{} }
-func (tmr *TagMapRegistry) Load() (int, error) { return Load(tmr, TAGS_MAPPING_FILE) }
-func (tmr *TagMapRegistry) Save() (int, error) { return Save(tmr, TAGS_MAPPING_FILE) }
+func CreateTagsMapRegistry() *TagMapRegistry  { return &TagMapRegistry{} }
+func (tm *TagMapRegistry) Load() (int, error) { return Load(tm, TAGS_MAPPING_FILE) }
+func (tm *TagMapRegistry) Save() (int, error) { return Save(tm, TAGS_MAPPING_FILE) }
 
-func (tmr *TagMapRegistry) Items(tagID ID) (items []ID) {
-	tmr.RLock()
-	defer tmr.RUnlock()
+func (tm *TagMapRegistry) Items(tagID ID) (items []ID) {
+	tm.RLock()
+	defer tm.RUnlock()
 
-	for _, v := range tmr.items {
+	for _, v := range tm.items {
 		if v.Tag == tagID {
 			items = append(items, v.Item)
 		}
@@ -60,11 +60,11 @@ func (tmr *TagMapRegistry) Items(tagID ID) (items []ID) {
 	return
 }
 
-func (tmr *TagMapRegistry) Tags(itemID ID) (tags []ID) {
-	tmr.RLock()
-	defer tmr.RUnlock()
+func (tm *TagMapRegistry) Tags(itemID ID) (tags []ID) {
+	tm.RLock()
+	defer tm.RUnlock()
 
-	for _, v := range tmr.items {
+	for _, v := range tm.items {
 		if v.Item == itemID {
 			tags = append(tags, v.Tag)
 		}
