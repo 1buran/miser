@@ -18,9 +18,11 @@ func main() {
 	tr := miser.CreateTransactionRegistry()
 	br := miser.CreateBalanceRegistry()
 	cr := miser.CreateCurrencyRegistry()
+	tg := miser.CreateTagRegistry()
+	tm := miser.CreateTagsMapRegistry()
 
 	// Create service:
-	l := miser.CreateLedger(ar, br, tr, cr)
+	l := miser.CreateLedger(ar, br, tr, cr, tg, tm)
 
 	n, err := ar.Load()
 	fmt.Println(strings.Repeat("---", 40))
@@ -38,17 +40,16 @@ func main() {
 	fmt.Printf("Balances: %#v\n", br.List())
 	//	fmt.Println("check balance:", miser.CheckBalance())
 
-	// todo
-	n, err = miser.LoadTags()
+	// load tags:
+	n, err = tg.Load()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d tags loaded, err: %v\n", n, err)
-	fmt.Printf("Tags: %#v\n", miser.Tags.Items)
+	fmt.Printf("Tags: %#v\n", tg.List())
 
-	// todo
-	n, err = miser.LoadTagsMap()
+	// load tags map:
+	n, err = tm.Load()
 	fmt.Println(strings.Repeat("---", 40))
 	fmt.Printf("%d tags map loaded, err: %v\n", n, err)
-	fmt.Printf("TagsMap: %#v\n", miser.TagsMap.Items)
 
 	ac1, err := l.CreateAccount(
 		"SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
@@ -120,12 +121,8 @@ func main() {
 	fmt.Printf("%d new transactions saved, err: %v\n", n, err)
 	n, err = br.Save()
 	fmt.Printf("%d balances saved, err: %v\n", n, err)
-
-	// todo
-	n, err = miser.SaveTags()
+	n, err = tg.Save()
 	fmt.Printf("%d tags saved, err: %v\n", n, err)
-
-	//todo
-	n, err = miser.SaveTagsMap()
+	n, err = tm.Save()
 	fmt.Printf("%d tags map saved, err: %v\n", n, err)
 }

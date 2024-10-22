@@ -12,10 +12,12 @@ type Ledger struct {
 	ar *AccountRegistry
 	br *BalanceRegistry
 	cr *CurrencyRegistry
+	tg *TagRegistry
+	tm *TagMapRegistry
 }
 
-func CreateLedger(ar *AccountRegistry, br *BalanceRegistry, tr *TransactionRegistry, cr *CurrencyRegistry) *Ledger {
-	return &Ledger{ar: ar, tr: tr, br: br, cr: cr}
+func CreateLedger(ar *AccountRegistry, br *BalanceRegistry, tr *TransactionRegistry, cr *CurrencyRegistry, tg *TagRegistry, tm *TagMapRegistry) *Ledger {
+	return &Ledger{ar: ar, tr: tr, br: br, cr: cr, tg: tg, tm: tm}
 }
 
 func (l *Ledger) CreateInitialTransaction(accID ID, v int64) *Transaction {
@@ -108,13 +110,13 @@ func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account
 	transa := l.CreateInitialTransaction(acc.ID, v)
 	b := l.CreateBalance(acc.ID, transa.ID, transa.Time, v)
 
-	tag := Tags.GetByName(Initial)
+	tag := l.tg.GetByName(Initial)
 	if tag == nil {
-		tag = Tags.Create(Initial)
+		tag = l.tg.Create(Initial)
 	}
 
-	TagsMap.Create(tag.ID, transa.ID, TransactionTag)
-	TagsMap.Create(tag.ID, b.ID, BalanceTag)
+	l.tm.Create(tag.ID, transa.ID)
+	l.tm.Create(tag.ID, b.ID)
 
 	return &acc, nil
 

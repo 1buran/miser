@@ -14,9 +14,11 @@ func TestInitBalance(t *testing.T) {
 	tr := CreateTransactionRegistry()
 	br := CreateBalanceRegistry()
 	cr := CreateCurrencyRegistry()
+	tg := CreateTagRegistry()
+	tm := CreateTagsMapRegistry()
 
 	// Create service:
-	l := CreateLedger(ar, br, tr, cr)
+	l := CreateLedger(ar, br, tr, cr, tg, tm)
 
 	t.Run("zero", func(t *testing.T) {
 		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
@@ -33,14 +35,14 @@ func TestInitBalance(t *testing.T) {
 			t.Errorf("expected 0, %d found", b.Value)
 		}
 
-		tmaps := TagsMap.GetByItemId(b.ID)
-		if len(tmaps) != 1 {
-			t.Fatalf("expected 1 tag, found: %d", len(tmaps))
+		tags := tm.Tags(b.ID)
+		if len(tags) != 1 {
+			t.Fatalf("expected 1 tag, found: %d", len(tags))
 		}
 
-		expectedTag := Tags.GetByName(Initial)
-		if tmaps[0].Tag != expectedTag.ID {
-			t.Errorf("unexpected tag found: %#v", Tags.GetById(tmaps[0].Tag))
+		expectedTag := tg.GetByName(Initial)
+		if tags[0] != expectedTag.ID {
+			t.Errorf("unexpected tag found: %#v", tg.GetById(tags[0]))
 		}
 
 	})
@@ -65,9 +67,11 @@ func TestChangeBalance(t *testing.T) {
 	tr := CreateTransactionRegistry()
 	br := CreateBalanceRegistry()
 	cr := CreateCurrencyRegistry()
+	tg := CreateTagRegistry()
+	tm := CreateTagsMapRegistry()
 
 	// Create service:
-	l := CreateLedger(ar, br, tr, cr)
+	l := CreateLedger(ar, br, tr, cr, tg, tm)
 
 	t.Run("Expense", func(t *testing.T) {
 		cash, err := l.CreateAccount("Cash", Asset, "wallet", "USD", 1555.12)

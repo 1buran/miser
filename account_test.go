@@ -15,9 +15,11 @@ func TestCreateAccount(t *testing.T) {
 		tr := CreateTransactionRegistry()
 		br := CreateBalanceRegistry()
 		cr := CreateCurrencyRegistry()
+		tg := CreateTagRegistry()
+		tm := CreateTagsMapRegistry()
 
 		// Create service:
-		l := CreateLedger(ar, br, tr, cr)
+		l := CreateLedger(ar, br, tr, cr, tg, tm)
 
 		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
 		if err != nil {

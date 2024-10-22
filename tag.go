@@ -4,12 +4,6 @@ import (
 	"sync"
 )
 
-const (
-	AccountTag = iota
-	BalanceTag
-	TransactionTag
-)
-
 // Special system tag names:
 const (
 	Initial    = "Initial"
@@ -20,6 +14,8 @@ const (
 	Periodic    = "Periodic"
 )
 
+// Tag ties name of a tag and its id, nothing more.
+// For tagging object use TagMap.
 type Tag struct {
 	ID      ID
 	Name    EncryptedString
@@ -27,8 +23,8 @@ type Tag struct {
 }
 
 type TagRegistry struct {
-	Items  []Tag
-	Queued []Tag
+	items  []Tag
+	queued []Tag
 
 	sync.RWMutex
 }
@@ -37,8 +33,8 @@ func (tr *TagRegistry) GetById(tagID ID) *Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for i := len(tr.Items) - 1; i >= 0; i-- {
-		v := tr.Items[i]
+	for i := len(tr.items) - 1; i >= 0; i-- {
+		v := tr.items[i]
 		if v.ID == tagID {
 			return &v
 		}
@@ -50,8 +46,8 @@ func (tr *TagRegistry) GetByName(n string) *Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for i := len(tr.Items) - 1; i >= 0; i-- {
-		v := tr.Items[i]
+	for i := len(tr.items) - 1; i >= 0; i-- {
+		v := tr.items[i]
 		if string(v.Name) == n {
 			return &v
 		}
@@ -72,7 +68,7 @@ func (tr *TagRegistry) List() map[ID]Tag {
 	defer tr.RUnlock()
 
 	tags := make(map[ID]Tag)
-	for _, tag := range tr.Items { // the last readed is the most actual version
+	for _, tag := range tr.items { // the last readed is the most actual version
 		tags[tag.ID] = tag
 	}
 	return tags
@@ -82,7 +78,7 @@ func (tr *TagRegistry) Add(t Tag) int {
 	tr.Lock()
 	defer tr.Unlock()
 
-	tr.Items = append(tr.Items, t)
+	tr.items = append(tr.items, t)
 	return 1
 }
 
@@ -90,105 +86,16 @@ func (tr *TagRegistry) AddQueued(t Tag) {
 	tr.Lock()
 	defer tr.Unlock()
 
-	tr.Queued = append(tr.Queued, t)
+	tr.queued = append(tr.queued, t)
 }
 
 func (tr *TagRegistry) SyncQueued() []Tag {
 	tr.RLock()
 	defer tr.RUnlock()
 
-	return tr.Queued
+	return tr.queued
 }
 
-var Tags = TagRegistry{}
-
-func LoadTags() (int, error) { return Load(&Tags, TAGS_FILE) }
-func SaveTags() (int, error) { return Save(&Tags, TAGS_FILE) }
-
-type TagMap struct {
-	Tag, Item ID
-	Type      int
-}
-
-type TagMapRegistry struct {
-	Items  []TagMap
-	Queued []TagMap
-
-	sync.RWMutex
-}
-
-func (tmr *TagMapRegistry) Create(tagID, itemID ID, t int) {
-	tm := TagMap{Tag: tagID, Item: itemID, Type: t}
-	tmr.Add(tm)
-	tmr.AddQueued(tm)
-}
-
-func (tmr *TagMapRegistry) Add(tm TagMap) int {
-	tmr.Lock()
-	defer tmr.Unlock()
-
-	tmr.Items = append(tmr.Items, tm)
-	return 1
-}
-
-func (tmr *TagMapRegistry) AddQueued(tm TagMap) {
-	tmr.Lock()
-	defer tmr.Unlock()
-
-	tmr.Queued = append(tmr.Queued, tm)
-}
-
-func (tmr *TagMapRegistry) SyncQueued() []TagMap {
-	tmr.RLock()
-	defer tmr.RUnlock()
-
-	return tmr.Queued
-}
-
-var TagsMap = TagMapRegistry{}
-
-func LoadTagsMap() (int, error) { return Load(&TagsMap, TAGS_MAPPING_FILE) }
-func SaveTagsMap() (int, error) { return Save(&TagsMap, TAGS_MAPPING_FILE) }
-
-func (tmr *TagMapRegistry) GetByTagId(tagID ID) (tmList []TagMap) {
-	tmr.RLock()
-	defer tmr.RUnlock()
-
-	for _, v := range tmr.Items {
-		if v.Tag == tagID {
-			tmList = append(tmList, v)
-		}
-	}
-	return
-}
-
-func (tmr *TagMapRegistry) GetByItemId(itemID ID) (tmList []TagMap) {
-	tmr.RLock()
-	defer tmr.RUnlock()
-
-	for _, v := range tmr.Items {
-		if v.Item == itemID {
-			tmList = append(tmList, v)
-		}
-	}
-	return
-}
-
-func (tmr *TagMapRegistry) listItems(id ID, t int) (ids []ID) {
-	tmr.RLock()
-	defer tmr.RUnlock()
-
-	for _, v := range tmr.Items {
-		if v.Tag == id && v.Type == t {
-			ids = append(ids, v.Item)
-		}
-	}
-	return
-}
-
-func (tmr *TagMapRegistry) Accounts(tagID ID) []ID {
-	return tmr.listItems(tagID, AccountTag)
-}
-func (tmr *TagMapRegistry) Transactions(tagID ID) []ID {
-	return tmr.listItems(tagID, TransactionTag)
-}
+func CreateTagRegistry() *TagRegistry      { return &TagRegistry{} }
+func (tr *TagRegistry) Load() (int, error) { return Load(tr, TAGS_FILE) }
+func (tr *TagRegistry) Save() (int, error) { return Save(tr, TAGS_FILE) }
