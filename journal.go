@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	ACCOUNTS_FILE     = "miser.ac"
+	ACCOUNTS_FILE     = "miser.ar"
 	TRANSACTIONS_FILE = "miser.tr"
-	BALANCE_FILE      = "miser.bl"
+	BALANCE_FILE      = "miser.br"
 	TAGS_FILE         = "miser.tg"
 	TAGS_MAPPING_FILE = "miser.tm"
 )
