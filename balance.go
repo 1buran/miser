@@ -22,10 +22,10 @@ func (b Balance) ID() string      { return fmt.Sprintf("%s-%s", b.Account, b.Tra
 func (b Balance) Amount() float64 { return float64(b.Value) / Million }
 
 type BalanceRegistry struct {
-	items  []Balance // all items loaded from disk, last their versions
-	queued []Balance // queue of items for sync to disk
-	idx    map[string]int
-	qidx   map[string]int
+	items  []Balance          // order matters, items loaded from disk, last their versions
+	queued map[string]Balance // queue of items for sync to disk
+
+	idx map[string]int
 
 	sync.RWMutex
 }
@@ -70,26 +70,20 @@ func (br *BalanceRegistry) Add(b Balance) int {
 func (br *BalanceRegistry) AddQueued(b Balance) {
 	br.Lock()
 	defer br.Unlock()
-
-	// check the index of item and update it in place
-	i, ok := br.qidx[b.ID()]
-	if ok {
-		br.queued[i] = b
-		return
-	}
-
-	br.qidx[b.ID()] = len(br.queued)
-	br.queued = append(br.queued, b)
+	br.queued[b.ID()] = b
 }
 
-func (br *BalanceRegistry) SyncQueued() []Balance {
+func (br *BalanceRegistry) SyncQueued() (changes []Balance) {
 	br.RLock()
 	defer br.RUnlock()
-	return br.queued
+	for _, v := range br.queued {
+		changes = append(changes, v)
+	}
+	return
 }
 
 func CreateBalanceRegistry() *BalanceRegistry {
-	return &BalanceRegistry{idx: make(map[string]int), qidx: make(map[string]int)}
+	return &BalanceRegistry{idx: make(map[string]int), queued: make(map[string]Balance)}
 }
 
 func (br *BalanceRegistry) Load() (int, error) { return Load(br, BALANCE_FILE) }
