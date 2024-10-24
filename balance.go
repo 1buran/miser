@@ -22,18 +22,19 @@ func (b Balance) ID() string      { return fmt.Sprintf("%s-%s", b.Account, b.Tra
 func (b Balance) Amount() float64 { return float64(b.Value) / Million }
 
 type BalanceRegistry struct {
-	items  []Balance          // order matters, items loaded from disk, last their versions
+	items  map[string]Balance // order matters, items loaded from disk, last their versions
 	queued map[string]Balance // queue of items for sync to disk
-
-	idx map[string]int
 
 	sync.RWMutex
 }
 
-func (br *BalanceRegistry) List() []Balance {
+func (br *BalanceRegistry) List() (balances []Balance) {
 	br.RLock()
 	defer br.RUnlock()
-	return br.items
+	for _, v := range br.items {
+		balances = append(balances, v)
+	}
+	return
 }
 
 // Find a balance of given account transaction.
@@ -44,9 +45,9 @@ func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	defer br.RUnlock()
 
 	key := fmt.Sprintf("%s-%s", accID, trID)
-	i, ok := br.idx[key]
+	b, ok := br.items[key]
 	if ok {
-		return &br.items[i]
+		return &b
 	}
 	return nil
 }
@@ -54,16 +55,7 @@ func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 func (br *BalanceRegistry) Add(b Balance) int {
 	br.Lock()
 	defer br.Unlock()
-
-	// check the index of item and update it in place
-	i, ok := br.idx[b.ID()]
-	if ok {
-		br.items[i] = b
-		return 1
-	}
-
-	br.idx[b.ID()] = len(br.items)
-	br.items = append(br.items, b)
+	br.items[b.ID()] = b
 	return 1
 }
 
@@ -83,7 +75,10 @@ func (br *BalanceRegistry) SyncQueued() (changes []Balance) {
 }
 
 func CreateBalanceRegistry() *BalanceRegistry {
-	return &BalanceRegistry{idx: make(map[string]int), queued: make(map[string]Balance)}
+	return &BalanceRegistry{
+		items:  make(map[string]Balance),
+		queued: make(map[string]Balance),
+	}
 }
 
 func (br *BalanceRegistry) Load() (int, error) { return Load(br, BALANCE_FILE) }

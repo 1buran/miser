@@ -1,17 +1,21 @@
 package miser
 
 import (
+	"fmt"
 	"sync"
 )
 
 // TagMap ties together a tag and some object: account, transaction etc.
 type TagMap struct {
 	Tag, Item ID
+	Deleted   bool
 }
 
+func (tgm TagMap) Key() string { return fmt.Sprintf("%s-%s", tgm.Tag, tgm.Item) }
+
 type TagMapRegistry struct {
-	items  []TagMap
-	queued []TagMap
+	items  map[string]TagMap
+	queued map[string]TagMap
 
 	sync.RWMutex
 }
@@ -26,7 +30,7 @@ func (tm *TagMapRegistry) Add(t TagMap) int {
 	tm.Lock()
 	defer tm.Unlock()
 
-	tm.items = append(tm.items, t)
+	tm.items[t.Key()] = t
 	return 1
 }
 
@@ -34,17 +38,26 @@ func (tm *TagMapRegistry) AddQueued(t TagMap) {
 	tm.Lock()
 	defer tm.Unlock()
 
-	tm.queued = append(tm.queued, t)
+	tm.queued[t.Key()] = t
 }
 
-func (tm *TagMapRegistry) SyncQueued() []TagMap {
+func (tm *TagMapRegistry) SyncQueued() (changes []TagMap) {
 	tm.RLock()
 	defer tm.RUnlock()
 
-	return tm.queued
+	for _, t := range tm.queued {
+		changes = append(changes, t)
+	}
+	return
 }
 
-func CreateTagsMapRegistry() *TagMapRegistry  { return &TagMapRegistry{} }
+func CreateTagsMapRegistry() *TagMapRegistry {
+	return &TagMapRegistry{
+		items:  make(map[string]TagMap),
+		queued: make(map[string]TagMap),
+	}
+}
+
 func (tm *TagMapRegistry) Load() (int, error) { return Load(tm, TAGS_MAPPING_FILE) }
 func (tm *TagMapRegistry) Save() (int, error) { return Save(tm, TAGS_MAPPING_FILE) }
 

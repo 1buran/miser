@@ -25,8 +25,8 @@ type Transaction struct {
 func (t *Transaction) IsInitial() bool { return t.Source == t.Dest }
 
 type TransactionRegistry struct {
-	items  []Transaction
-	queued []Transaction
+	items  map[ID]Transaction
+	queued map[ID]Transaction
 
 	sync.RWMutex
 }
@@ -34,42 +34,39 @@ type TransactionRegistry struct {
 func (tr *TransactionRegistry) List() (transactions []Transaction) {
 	tr.RLock()
 	defer tr.RUnlock()
-
-	m := make(map[ID]int)
-
-	for _, transa := range tr.items {
-		n, oldVersion := m[transa.ID]
-		if oldVersion {
-			transactions[n] = transa
-		} else {
-			m[transa.ID] = len(transactions)
-			transactions = append(transactions, transa)
-		}
+	for _, v := range tr.items {
+		transactions = append(transactions, v)
 	}
-	return transactions
+	return
 }
 
 func (tr *TransactionRegistry) Add(t Transaction) int {
 	tr.Lock()
 	defer tr.Unlock()
-	tr.items = append(tr.items, t)
+	tr.items[t.ID] = t
 	return 1
 }
 
 func (tr *TransactionRegistry) AddQueued(t Transaction) {
 	tr.Lock()
 	defer tr.Unlock()
-	tr.queued = append(tr.queued, t)
+	tr.queued[t.ID] = t
 }
 
-func (tr *TransactionRegistry) SyncQueued() []Transaction {
+func (tr *TransactionRegistry) SyncQueued() (changes []Transaction) {
 	tr.RLock()
 	defer tr.RUnlock()
-	return tr.queued
+	for _, v := range tr.queued {
+		changes = append(changes, v)
+	}
+	return
 }
 
 // Find last transaction.
 func (tr *TransactionRegistry) Last(accID ID) *Transaction {
+	tr.RLock()
+	defer tr.RUnlock()
+
 	var transa *Transaction
 	var mostRecent time.Time
 
@@ -87,13 +84,21 @@ func (tr *TransactionRegistry) FirstBefore(accID ID, trTime time.Time) *Transact
 	tr.RLock()
 	defer tr.RUnlock()
 
-	for i := len(tr.items) - 1; i >= 0; i-- {
-		t := tr.items[i]
+	var transa *Transaction
+
+	// the trick: use very big value of duration to be sure that the first will be less
+	minDuration := 24 * time.Hour * 365 * 100 // 100 years
+
+	for _, t := range tr.items {
 		if (t.Source == accID || t.Dest == accID) && t.Time.Before(trTime) {
-			return &t
+			min := trTime.Sub(t.Time)
+			if min < minDuration {
+				minDuration = min
+				transa = &t
+			}
 		}
 	}
-	return nil
+	return transa
 }
 
 // Find all transactions of account after given time.
@@ -118,6 +123,12 @@ func (tr *TransactionRegistry) AllAfter(accID ID, trTime time.Time) (trs []Trans
 // 	}
 // }
 
-func CreateTransactionRegistry() *TransactionRegistry { return &TransactionRegistry{} }
-func (tr *TransactionRegistry) Load() (int, error)    { return Load(tr, TRANSACTIONS_FILE) }
-func (tr *TransactionRegistry) Save() (int, error)    { return Save(tr, TRANSACTIONS_FILE) }
+func CreateTransactionRegistry() *TransactionRegistry {
+	return &TransactionRegistry{
+		items:  make(map[ID]Transaction),
+		queued: make(map[ID]Transaction),
+	}
+}
+
+func (tr *TransactionRegistry) Load() (int, error) { return Load(tr, TRANSACTIONS_FILE) }
+func (tr *TransactionRegistry) Save() (int, error) { return Save(tr, TRANSACTIONS_FILE) }

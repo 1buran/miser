@@ -23,8 +23,8 @@ type Account struct {
 func (a *Account) isClosed() bool { return !a.ClosedAt.IsZero() }
 
 type AccountRegistry struct {
-	items  []Account
-	queued []Account
+	items  map[ID]Account
+	queued map[ID]Account
 
 	sync.RWMutex
 }
@@ -32,22 +32,15 @@ type AccountRegistry struct {
 func (ar *AccountRegistry) List() map[ID]Account {
 	ar.RLock()
 	defer ar.RUnlock()
-	accounts := make(map[ID]Account)
-	for _, acc := range ar.items { // the last readed is the most actual version
-		accounts[acc.ID] = acc
-	}
-	return accounts
+	return ar.items
 }
 
 func (ar *AccountRegistry) Get(accID ID) *Account {
 	ar.RLock()
 	defer ar.RUnlock()
-
-	for i := len(ar.items) - 1; i >= 0; i-- {
-		item := ar.items[i]
-		if item.ID == accID {
-			return &item
-		}
+	acc, ok := ar.items[accID]
+	if ok {
+		return &acc
 	}
 	return nil
 }
@@ -55,7 +48,7 @@ func (ar *AccountRegistry) Get(accID ID) *Account {
 func (ar *AccountRegistry) Add(a Account) int {
 	ar.Lock()
 	defer ar.Unlock()
-	ar.items = append(ar.items, a)
+	ar.items[a.ID] = a
 	return 1
 
 }
@@ -63,15 +56,21 @@ func (ar *AccountRegistry) Add(a Account) int {
 func (ar *AccountRegistry) AddQueued(a Account) {
 	ar.Lock()
 	defer ar.Unlock()
-	ar.queued = append(ar.queued, a)
+	ar.queued[a.ID] = a
 }
 
-func (ar *AccountRegistry) SyncQueued() []Account {
+func (ar *AccountRegistry) SyncQueued() (changes []Account) {
 	ar.RLock()
 	defer ar.RUnlock()
-	return ar.queued
+	for _, acc := range ar.items {
+		changes = append(changes, acc)
+	}
+	return
 }
 
-func CreateAccountRegistry() *AccountRegistry  { return &AccountRegistry{} }
+func CreateAccountRegistry() *AccountRegistry {
+	return &AccountRegistry{items: make(map[ID]Account), queued: make(map[ID]Account)}
+}
+
 func (ar *AccountRegistry) Load() (int, error) { return Load(ar, ACCOUNTS_FILE) }
 func (ar *AccountRegistry) Save() (int, error) { return Save(ar, ACCOUNTS_FILE) }
