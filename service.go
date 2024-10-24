@@ -55,7 +55,7 @@ func (l *Ledger) CreateTransaction(src, dst ID, t time.Time, v float64, txt stri
 
 	value := int64(v * Million)
 
-	b := l.br.AccountBalance(src)
+	b := l.AccountBalance(src)
 	if b.Value < value {
 		return nil, errors.New("you cannot trasfer more money than you have")
 	}
@@ -197,4 +197,25 @@ func (l *Ledger) AmountTransaction(t *Transaction) string {
 	}
 	return fmt.Sprintf("%.2f", float64(t.Value)/Million)
 
+}
+
+// Account balance: balance at time of last transaction.
+func (l *Ledger) AccountBalance(accID ID) *Balance {
+	lastTransa := l.tr.Last(accID)
+	if lastTransa != nil {
+		b := l.br.TransactionBalance(accID, lastTransa.ID)
+		if b != nil {
+			return b
+		}
+	}
+	return nil
+}
+
+// Account amount.
+func (l *Ledger) AccountAmount(accID ID) float64 {
+	b := l.AccountBalance(accID)
+	if b == nil {
+		return 0
+	}
+	return float64(b.Value) / Million
 }

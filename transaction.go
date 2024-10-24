@@ -68,6 +68,20 @@ func (tr *TransactionRegistry) SyncQueued() []Transaction {
 	return tr.queued
 }
 
+// Find last transaction.
+func (tr *TransactionRegistry) Last(accID ID) *Transaction {
+	var transa *Transaction
+	var mostRecent time.Time
+
+	for _, t := range tr.items {
+		if (t.Source == accID || t.Dest == accID) && t.Time.After(mostRecent) {
+			mostRecent = t.Time
+			transa = &t
+		}
+	}
+	return transa
+}
+
 // Find a transaction of account before given time.
 func (tr *TransactionRegistry) FirstBefore(accID ID, trTime time.Time) *Transaction {
 	tr.RLock()

@@ -49,26 +49,6 @@ func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	return nil
 }
 
-// Find a current(last) balance of account.
-func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
-	br.RLock()
-	defer br.RUnlock()
-	for i := len(br.items) - 1; i >= 0; i-- {
-		if br.items[i].Account == accID {
-			return &br.items[i]
-		}
-	}
-	return nil
-}
-
-func (br *BalanceRegistry) AccountValue(accID ID) float64 {
-	b := br.AccountBalance(accID)
-	if b == nil {
-		return 0
-	}
-	return float64(b.Value) / Million
-}
-
 func (br *BalanceRegistry) Add(b Balance) int {
 	br.Lock()
 	defer br.Unlock()

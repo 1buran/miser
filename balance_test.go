@@ -26,7 +26,7 @@ func TestBalanceInit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		b := l.br.AccountBalance(acc.ID)
+		b := l.AccountBalance(acc.ID)
 		if b == nil {
 			t.Fatal("balance was not created during account creation")
 		}
@@ -42,7 +42,7 @@ func TestBalanceInit(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if amount := l.br.AccountValue(acc.ID); amount != 123.78 {
+		if amount := l.AccountAmount(acc.ID); amount != 123.78 {
 			t.Errorf("expected 123.78, got: %f", amount)
 		}
 	})
@@ -73,7 +73,7 @@ func TestBalanceChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if openMarketBalance := l.br.AccountValue(market.ID); openMarketBalance != 343.11 {
+		if openMarketBalance := l.AccountAmount(market.ID); openMarketBalance != 343.11 {
 			t.Errorf("expected 344.64, got: %.2f", openMarketBalance)
 		}
 
@@ -82,11 +82,11 @@ func TestBalanceChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if amount := l.br.AccountValue(cash.ID); amount != 1553.59 {
+		if amount := l.AccountAmount(cash.ID); amount != 1553.59 {
 			t.Errorf("expected 1553.59, got: %.2f", amount)
 		}
 
-		if updateMarketBalance := l.br.AccountValue(market.ID); updateMarketBalance != 344.64 {
+		if updateMarketBalance := l.AccountAmount(market.ID); updateMarketBalance != 344.64 {
 			t.Errorf("expected 344.64, got: %.2f", updateMarketBalance)
 		}
 
@@ -104,13 +104,13 @@ func TestBalanceChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		openMarketBalance := l.br.AccountBalance(market.ID)
+		openMarketBalance := l.AccountBalance(market.ID)
 		t.Logf("open market balance: %#v", openMarketBalance)
 		for i := 0; i < 5; i++ { // buy 5 kg of carrot
 			_, _ = l.CreateTransaction(buyers[i].ID, market.ID, time.Now(), 1.53, "1kg carrot")
 		}
 
-		closeMarketBalance := l.br.AccountBalance(market.ID)
+		closeMarketBalance := l.AccountBalance(market.ID)
 		t.Logf("close market balance: %#v", closeMarketBalance)
 
 		earnings := float64(closeMarketBalance.Value-openMarketBalance.Value) / Million
@@ -133,13 +133,13 @@ func TestBalanceChange(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		openPartyBalance := l.br.AccountBalance(cash.ID)
+		openPartyBalance := l.AccountBalance(cash.ID)
 
 		for i := 0; i < 5; i++ { // buy 5 kg of carrot
 			_, _ = l.CreateTransaction(cash.ID, pubs[i].ID, time.Now(), 1.53, "1 bear")
 		}
 
-		closePartyBalance := l.br.AccountBalance(cash.ID)
+		closePartyBalance := l.AccountBalance(cash.ID)
 
 		spendings := float64(closePartyBalance.Value-openPartyBalance.Value) / Million
 		if spendings != -7.65 {

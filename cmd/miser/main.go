@@ -82,7 +82,7 @@ func main() {
 
 	fmt.Printf("\n%#v\n", ac2)
 
-	ac1B := br.AccountValue(ac1.ID)
+	ac1B := l.AccountAmount(ac1.ID)
 	fmt.Printf("Balance of SMBC before transaction: %.2f\n", ac1B)
 
 	t1, err := l.CreateTransaction(ac1.ID, Aeon.ID, time.Now(), 112.56, "私は店に行き、卵2kgと小麦粉を買いました。")
@@ -92,7 +92,7 @@ func main() {
 	}
 	fmt.Printf("Transaction: %#v\n", t1)
 
-	ac1B = br.AccountValue(ac1.ID)
+	ac1B = l.AccountAmount(ac1.ID)
 	fmt.Printf("Balance of SMBC after transaction: %.2f\n", ac1B)
 
 	b, err = json.Marshal(t1)
