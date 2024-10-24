@@ -29,9 +29,9 @@ func (l *Ledger) Save() {
 	l.tm.Save()
 }
 
-func (l *Ledger) CreateInitialTransaction(accID ID, v int64) *Transaction {
+func (l *Ledger) CreateInitialTransaction(accID ID, openedAt time.Time, v int64) *Transaction {
 	transa := Transaction{
-		ID: CreateID(), Source: accID, Dest: accID, Time: time.Now(),
+		ID: CreateID(), Source: accID, Dest: accID, Time: openedAt,
 		Value: v, Text: "Initial balance"}
 	l.tr.Add(transa)
 	l.tr.AddQueued(transa)
@@ -94,7 +94,7 @@ func (l *Ledger) CreateTransaction(src, dst ID, t time.Time, v float64, txt stri
 	return &transa, nil
 }
 
-func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account, error) {
+func (l *Ledger) CreateAccount(n, t, d, c string, openedAt time.Time, initBalance float64) (*Account, error) {
 	n = strings.TrimSpace(n)
 	if n == "" {
 		return nil, errors.New("name of account is blank")
@@ -114,7 +114,7 @@ func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account
 		Type:     EncryptedString(t),
 		Desc:     EncryptedString(d),
 		Cur:      EncryptedString(c),
-		OpenedAt: time.Now(),
+		OpenedAt: openedAt,
 	}
 	// add new account to registry and sync queue
 	l.ar.Add(acc)
@@ -122,7 +122,7 @@ func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account
 
 	// create initial transaction
 	v := int64(initBalance * Million)
-	transa := l.CreateInitialTransaction(acc.ID, v)
+	transa := l.CreateInitialTransaction(acc.ID, openedAt, v)
 	l.CreateBalance(acc.ID, transa.ID, v)
 
 	// tag transaction as initial

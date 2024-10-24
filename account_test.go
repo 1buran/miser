@@ -2,6 +2,7 @@ package miser
 
 import (
 	"testing"
+	"time"
 )
 
 func TestCreateAccount(t *testing.T) {
@@ -21,7 +22,7 @@ func TestCreateAccount(t *testing.T) {
 		// Create service:
 		l := CreateLedger(ar, br, tr, cr, tg, tm)
 
-		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", 0.00)
+		acc, err := l.CreateAccount("Deposit", Asset, "deposit account", "USD", time.Now(), 0.00)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -18,7 +18,8 @@ type Balance struct {
 	Value                int64
 }
 
-func (b Balance) ID() string { return fmt.Sprintf("%s-%s", b.Account, b.Transaction) }
+func (b Balance) ID() string      { return fmt.Sprintf("%s-%s", b.Account, b.Transaction) }
+func (b Balance) Amount() float64 { return float64(b.Value) / Million }
 
 type BalanceRegistry struct {
 	items  []Balance // all items loaded from disk, last their versions

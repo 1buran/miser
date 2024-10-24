@@ -52,14 +52,14 @@ func main() {
 	fmt.Printf("%d tags map loaded, err: %v\n", n, err)
 
 	ac1, err := l.CreateAccount(
-		"SMBC Trust Bank", miser.Asset, "Salary account", "JPY", 1555.13)
+		"SMBC Trust Bank", miser.Asset, "Salary account", "JPY", time.Now(), 1555.13)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	Aeon, err := l.CreateAccount(
-		"AEON Supermarket", miser.Expense, "work bank account", "JPY", 0)
+		"AEON Supermarket", miser.Expense, "work bank account", "JPY", time.Now(), 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
