@@ -68,6 +68,33 @@ func (tr *TransactionRegistry) SyncQueued() []Transaction {
 	return tr.queued
 }
 
+// Find a transaction of account before given time.
+func (tr *TransactionRegistry) FirstBefore(accID ID, trTime time.Time) *Transaction {
+	tr.RLock()
+	defer tr.RUnlock()
+
+	for i := len(tr.items) - 1; i >= 0; i-- {
+		t := tr.items[i]
+		if (t.Source == accID || t.Dest == accID) && t.Time.Before(trTime) {
+			return &t
+		}
+	}
+	return nil
+}
+
+// Find all transactions of account after given time.
+func (tr *TransactionRegistry) AllAfter(accID ID, trTime time.Time) (trs []Transaction) {
+	tr.RLock()
+	defer tr.RUnlock()
+
+	for _, t := range tr.items {
+		if (t.Source == accID || t.Dest == accID) && t.Time.After(trTime) {
+			trs = append(trs, t)
+		}
+	}
+	return
+}
+
 // Delete all transaction of given account (useful in case of account deletion).
 // func DeleteAllAccountTransactions(accID ID) {
 // 	for _, tr := range Transactions.items {

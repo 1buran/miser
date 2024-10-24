@@ -1,8 +1,8 @@
 package miser
 
 import (
+	"fmt"
 	"sync"
-	"time"
 )
 
 const (
@@ -10,50 +10,41 @@ const (
 	Debit
 )
 
+// Balance is value object, it is immutable,
+// do not try to change it, do create another one instead,
+// the last version will be used (see Add method of BalanceRegistry).
 type Balance struct {
-	ID, Account, Transaction ID
-	Value                    int64
-	Time                     time.Time
-	Deleted                  bool
+	Account, Transaction ID // in fact the id of balance item is transaction id
+	Value                int64
 }
 
+func (b Balance) ID() string { return fmt.Sprintf("%s-%s", b.Account, b.Transaction) }
+
 type BalanceRegistry struct {
-	items  []Balance // all items loaded from disk
+	items  []Balance // all items loaded from disk, last their versions
 	queued []Balance // queue of items for sync to disk
+	idx    map[string]int
 
 	sync.RWMutex
 }
 
-func (br *BalanceRegistry) List() (balances []Balance) {
+func (br *BalanceRegistry) List() []Balance {
 	br.RLock()
 	defer br.RUnlock()
-
-	m := make(map[ID]int)
-
-	for _, balance := range br.items {
-		if balance.Deleted {
-			continue
-		}
-		n, oldVer := m[balance.ID]
-		if oldVer {
-			balances[n] = balance
-		} else {
-			m[balance.ID] = len(balances)
-			balances = append(balances, balance)
-		}
-	}
-	return
+	return br.items
 }
 
 // Find a balance of given account transaction.
+// Keep in mind: every transaction creates two different balances
+// for source and destination accounts.
 func (br *BalanceRegistry) TransactionBalance(accID, trID ID) *Balance {
 	br.RLock()
 	defer br.RUnlock()
-	for i := len(br.items) - 1; i >= 0; i-- {
-		item := br.items[i]
-		if !item.Deleted && item.Account == accID && item.Transaction == trID {
-			return &item
-		}
+
+	key := fmt.Sprintf("%s-%s", accID, trID)
+	i, ok := br.idx[key]
+	if ok {
+		return &br.items[i]
 	}
 	return nil
 }
@@ -63,52 +54,11 @@ func (br *BalanceRegistry) AccountBalance(accID ID) *Balance {
 	br.RLock()
 	defer br.RUnlock()
 	for i := len(br.items) - 1; i >= 0; i-- {
-		if !br.items[i].Deleted && br.items[i].Account == accID {
+		if br.items[i].Account == accID {
 			return &br.items[i]
 		}
 	}
 	return nil
-}
-
-// Find a balance of account before given time.
-func (br *BalanceRegistry) AccountBalanceBefore(accID ID, t time.Time) *Balance {
-	br.RLock()
-	defer br.RUnlock()
-	for i := len(br.items) - 1; i >= 0; i-- {
-		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.Before(t) {
-			return &br.items[i]
-		}
-	}
-	return nil
-}
-
-// Find a balance of account after given time.
-func (br *BalanceRegistry) AccountBalanceAfter(accID ID, t time.Time) *Balance {
-	br.RLock()
-	defer br.RUnlock()
-	for i := 0; i < len(br.items); i++ {
-		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.After(t) {
-			return &br.items[i]
-		}
-	}
-	return nil
-}
-
-// Rebalance account balance after changes.
-func (br *BalanceRegistry) rebalanceAccountBalanceAfter(accID ID, t time.Time, fix int64) (changes []*Balance) {
-	br.RLock()
-	defer br.RUnlock()
-	for i := 0; i < len(br.items); i++ {
-		if !br.items[i].Deleted && br.items[i].Account == accID && br.items[i].Time.After(t) {
-			b := br.items[i]
-			b.Deleted = true // mark old one as deleted
-			changes = append(
-				changes, &b, &Balance{ // create another one with fixed balance
-					ID: CreateID(), Account: b.Account, Transaction: b.Transaction,
-					Time: b.Time, Value: b.Value + fix})
-		}
-	}
-	return
 }
 
 func (br *BalanceRegistry) AccountValue(accID ID) float64 {
@@ -119,27 +69,18 @@ func (br *BalanceRegistry) AccountValue(accID ID) float64 {
 	return float64(b.Value) / Million
 }
 
-// Update balance in registry.
-// todo considering change registry items to map of pointers for able update items directly
-func (br *BalanceRegistry) Update(b Balance) {
-	br.Lock()
-	defer br.Unlock()
-	for i := len(br.items) - 1; i >= 0; i-- {
-		item := br.items[i]
-		if item.Deleted {
-			continue
-		}
-		if item.ID == b.ID {
-			item = b
-			break
-		}
-	}
-	br.AddQueued(b)
-}
-
 func (br *BalanceRegistry) Add(b Balance) int {
 	br.Lock()
 	defer br.Unlock()
+
+	// check the index of item and update it in place
+	i, ok := br.idx[b.ID()]
+	if ok {
+		br.items[i] = b
+		return 1
+	}
+
+	br.idx[b.ID()] = len(br.items)
 	br.items = append(br.items, b)
 	return 1
 }
@@ -156,7 +97,8 @@ func (br *BalanceRegistry) SyncQueued() []Balance {
 	return br.queued
 }
 
-func CreateBalanceRegistry() *BalanceRegistry  { return &BalanceRegistry{} }
+func CreateBalanceRegistry() *BalanceRegistry { return &BalanceRegistry{idx: make(map[string]int)} }
+
 func (br *BalanceRegistry) Load() (int, error) { return Load(br, BALANCE_FILE) }
 func (br *BalanceRegistry) Save() (int, error) { return Save(br, BALANCE_FILE) }
 

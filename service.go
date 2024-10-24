@@ -75,8 +75,12 @@ func (l *Ledger) CreateTransaction(src, dst ID, t time.Time, v float64, txt stri
 	l.tr.Add(transa)
 	l.tr.AddQueued(transa)
 
-	l.UpdateBalance(src, transa.ID, string(srcAcc.Type), Credit, transa.Time, value)
-	l.UpdateBalance(dst, transa.ID, string(dstAcc.Type), Debit, transa.Time, value)
+	if err := l.UpdateBalance(src, transa.ID, string(srcAcc.Type), Credit, t, value); err != nil {
+		return nil, err
+	}
+	if err := l.UpdateBalance(dst, transa.ID, string(dstAcc.Type), Debit, t, value); err != nil {
+		return nil, err
+	}
 
 	return &transa, nil
 }
@@ -103,34 +107,34 @@ func (l *Ledger) CreateAccount(n, t, d, c string, initBalance float64) (*Account
 		Cur:      EncryptedString(c),
 		OpenedAt: time.Now(),
 	}
+	// add new account to registry and sync queue
 	l.ar.Add(acc)
 	l.ar.AddQueued(acc)
 
+	// create initial transaction
 	v := int64(initBalance * Million)
 	transa := l.CreateInitialTransaction(acc.ID, v)
-	b := l.CreateBalance(acc.ID, transa.ID, transa.Time, v)
+	l.CreateBalance(acc.ID, transa.ID, v)
 
+	// tag transaction as initial
 	tag := l.tg.GetByName(Initial)
 	if tag == nil {
 		tag = l.tg.Create(Initial)
 	}
-
 	l.tm.Create(tag.ID, transa.ID)
-	l.tm.Create(tag.ID, b.ID)
 
 	return &acc, nil
-
 }
 
-func (l *Ledger) CreateBalance(accID, trID ID, t time.Time, value int64) *Balance {
-	b := Balance{ID: CreateID(), Account: accID, Transaction: trID, Value: value, Time: time.Now()}
+func (l *Ledger) CreateBalance(accID, trID ID, value int64) *Balance {
+	b := Balance{Account: accID, Transaction: trID, Value: value}
 	l.br.Add(b)
 	l.br.AddQueued(b)
 	return &b
 }
 
 // Credit - source, Debit - destination
-func (l *Ledger) UpdateBalance(accID, trID ID, accType string, operType int, trTime time.Time, value int64) {
+func (l *Ledger) UpdateBalance(accID, trID ID, accType string, operType int, trTime time.Time, value int64) error {
 	// Account Type  | Effect on Account Balance
 	// ------------------------------------------
 	// --------------|    Debit     |   Credit
@@ -155,25 +159,34 @@ func (l *Ledger) UpdateBalance(accID, trID ID, accType string, operType int, trT
 		}
 	}
 
-	b := l.br.AccountBalanceBefore(accID, trTime)
-	if b == nil {
-		panic("tried update nil balance, account ID:" + accID)
+	t := l.tr.FirstBefore(accID, trTime)
+	if t == nil {
+		return fmt.Errorf("transaction not found, before %s, account ID: %s", trTime, accID)
 	}
 
-	value += b.Value
+	b := l.br.TransactionBalance(accID, t.ID)
+	if b == nil {
+		return fmt.Errorf("balance not found, transaction ID: %s, account ID: %s", t.ID, accID)
+	}
 
-	l.CreateBalance(accID, trID, trTime, value)
+	l.CreateBalance(accID, trID, b.Value+value)
 
-	b2 := l.br.AccountBalanceAfter(accID, trTime)
-	if b2 != nil {
-		// new delta between balance changes
-		fix := value - b2.Value
-
-		for _, change := range l.br.rebalanceAccountBalanceAfter(accID, trTime, fix) {
-			l.br.Add(*change)
-			l.br.AddQueued(*change)
+	// rebalance in case if the current transaction was in the middle of history:
+	//   t b      t b
+	//   0 200    0 200
+	// -50 150  -50 150
+	// -20 130   -5 145  <-- a new transaction in the middle of history
+	// -13 117  -20 125
+	//          -13 112
+	// fix = -5 (value of middle transaction)
+	for _, transa := range l.tr.AllAfter(accID, trTime) {
+		oldBalance := l.br.TransactionBalance(accID, transa.ID)
+		if oldBalance != nil {
+			l.CreateBalance(accID, transa.ID, oldBalance.Value+value)
 		}
 	}
+
+	return nil
 }
 
 func (l *Ledger) AmountTransaction(t *Transaction) string {
@@ -183,4 +196,5 @@ func (l *Ledger) AmountTransaction(t *Transaction) string {
 		return fmt.Sprintf("%s %.2f", c.Sign, float64(t.Value)/Million)
 	}
 	return fmt.Sprintf("%.2f", float64(t.Value)/Million)
+
 }

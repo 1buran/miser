@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestInitBalance(t *testing.T) {
+func TestBalanceInit(t *testing.T) {
 
 	t.Parallel()
 
@@ -34,17 +34,6 @@ func TestInitBalance(t *testing.T) {
 		if b.Value != 0 {
 			t.Errorf("expected 0, %d found", b.Value)
 		}
-
-		tags := tm.Tags(b.ID)
-		if len(tags) != 1 {
-			t.Fatalf("expected 1 tag, found: %d", len(tags))
-		}
-
-		expectedTag := tg.GetByName(Initial)
-		if tags[0] != expectedTag.ID {
-			t.Errorf("unexpected tag found: %#v", tg.GetById(tags[0]))
-		}
-
 	})
 
 	t.Run("float", func(t *testing.T) {
@@ -59,7 +48,7 @@ func TestInitBalance(t *testing.T) {
 	})
 }
 
-func TestChangeBalance(t *testing.T) {
+func TestBalanceChange(t *testing.T) {
 	t.Parallel()
 
 	// Create repositories:
@@ -160,32 +149,27 @@ func TestChangeBalance(t *testing.T) {
 
 }
 
-func TestListBalance(t *testing.T) {
+func TestBalanceList(t *testing.T) {
 
 	t.Parallel()
 
 	br := CreateBalanceRegistry()
 
 	aid := CreateID()
-	bid := CreateID()
 	tid := CreateID()
 
 	val := func(v float64) int64 { return int64(v * Million) }
 
 	// 3 redacts of the same balance:
-	br.Add(
-		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.11)})
-	br.Add(
-		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(1.12)})
-	br.Add(
-		Balance{ID: bid, Account: aid, Transaction: tid, Time: time.Now(), Value: val(3.15)})
+	br.Add(Balance{Account: aid, Transaction: tid, Value: val(1.11)})
+	br.Add(Balance{Account: aid, Transaction: tid, Value: val(1.12)})
+	br.Add(Balance{Account: aid, Transaction: tid, Value: val(3.15)})
 
-	bid2 := CreateID()
 	tid2 := CreateID()
 
-	br.Add(
-		Balance{ID: bid2, Account: aid, Transaction: tid2, Time: time.Now(), Value: val(1.76)})
+	br.Add(Balance{Account: aid, Transaction: tid2, Value: val(1.76)})
 
+	// count how many balances of transactions exist:
 	tBalances := make(map[ID]int)
 	for _, b := range br.List() {
 		tBalances[b.Transaction]++
