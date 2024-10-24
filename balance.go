@@ -25,6 +25,7 @@ type BalanceRegistry struct {
 	items  []Balance // all items loaded from disk, last their versions
 	queued []Balance // queue of items for sync to disk
 	idx    map[string]int
+	qidx   map[string]int
 
 	sync.RWMutex
 }
@@ -69,6 +70,15 @@ func (br *BalanceRegistry) Add(b Balance) int {
 func (br *BalanceRegistry) AddQueued(b Balance) {
 	br.Lock()
 	defer br.Unlock()
+
+	// check the index of item and update it in place
+	i, ok := br.qidx[b.ID()]
+	if ok {
+		br.queued[i] = b
+		return
+	}
+
+	br.qidx[b.ID()] = len(br.queued)
 	br.queued = append(br.queued, b)
 }
 
@@ -78,7 +88,9 @@ func (br *BalanceRegistry) SyncQueued() []Balance {
 	return br.queued
 }
 
-func CreateBalanceRegistry() *BalanceRegistry { return &BalanceRegistry{idx: make(map[string]int)} }
+func CreateBalanceRegistry() *BalanceRegistry {
+	return &BalanceRegistry{idx: make(map[string]int), qidx: make(map[string]int)}
+}
 
 func (br *BalanceRegistry) Load() (int, error) { return Load(br, BALANCE_FILE) }
 func (br *BalanceRegistry) Save() (int, error) { return Save(br, BALANCE_FILE) }
