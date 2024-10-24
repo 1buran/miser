@@ -20,6 +20,15 @@ func CreateLedger(ar *AccountRegistry, br *BalanceRegistry, tr *TransactionRegis
 	return &Ledger{ar: ar, tr: tr, br: br, cr: cr, tg: tg, tm: tm}
 }
 
+// Save all queued data, sync it to disk.
+func (l *Ledger) Save() {
+	l.tr.Save()
+	l.br.Save()
+	l.ar.Save()
+	l.tg.Save()
+	l.tm.Save()
+}
+
 func (l *Ledger) CreateInitialTransaction(accID ID, v int64) *Transaction {
 	transa := Transaction{
 		ID: CreateID(), Source: accID, Dest: accID, Time: time.Now(),
